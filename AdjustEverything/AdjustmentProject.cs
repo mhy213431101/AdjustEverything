@@ -4,9 +4,11 @@ internal sealed class AdjustmentProject
 {
     private int _pointSerial = 1;
     private int _heightSerial = 1;
+    private int _distanceSerial = 1;
 
     public List<SurveyPoint> Points { get; } = [];
     public List<HeightObservation> HeightObservations { get; } = [];
+    public List<DistanceObservation> DistanceObservations { get; } = [];
     public List<BoardLine> Lines { get; } = [];
 
     public SurveyPoint AddPoint(string? name, PointF canvasLocation)
@@ -16,6 +18,8 @@ internal sealed class AdjustmentProject
             Id = Guid.NewGuid(),
             Name = string.IsNullOrWhiteSpace(name) ? NextPointName() : name.Trim(),
             CanvasLocation = canvasLocation,
+            X = canvasLocation.X,
+            Y = canvasLocation.Y,
         };
         Points.Add(point);
         return point;
@@ -49,9 +53,25 @@ internal sealed class AdjustmentProject
         return observation;
     }
 
+    public DistanceObservation AddDistanceObservation(SurveyPoint from, SurveyPoint to, double value)
+    {
+        AddLine(from, to);
+        var observation = new DistanceObservation
+        {
+            Name = $"s{_distanceSerial++}",
+            From = from,
+            To = to,
+            Value = value,
+            Sigma = 1.0,
+        };
+        DistanceObservations.Add(observation);
+        return observation;
+    }
+
     public void RemovePoint(SurveyPoint point)
     {
         HeightObservations.RemoveAll(obs => ReferenceEquals(obs.From, point) || ReferenceEquals(obs.To, point));
+        DistanceObservations.RemoveAll(obs => ReferenceEquals(obs.From, point) || ReferenceEquals(obs.To, point));
         Lines.RemoveAll(line => ReferenceEquals(line.From, point) || ReferenceEquals(line.To, point));
         Points.Remove(point);
     }
@@ -59,15 +79,13 @@ internal sealed class AdjustmentProject
     public void RemoveHeightObservation(HeightObservation observation)
     {
         HeightObservations.Remove(observation);
+        RemoveLineIfUnused(observation.From, observation.To);
+    }
 
-        var hasOtherObservationOnSameLine = HeightObservations.Any(obs =>
-            ReferenceEquals(obs.From, observation.From) && ReferenceEquals(obs.To, observation.To)
-            || ReferenceEquals(obs.From, observation.To) && ReferenceEquals(obs.To, observation.From));
-
-        if (!hasOtherObservationOnSameLine)
-        {
-            Lines.RemoveAll(line => line.Connects(observation.From, observation.To));
-        }
+    public void RemoveDistanceObservation(DistanceObservation observation)
+    {
+        DistanceObservations.Remove(observation);
+        RemoveLineIfUnused(observation.From, observation.To);
     }
 
     public void RemoveObject(object? value)
@@ -80,6 +98,9 @@ internal sealed class AdjustmentProject
             case HeightObservation observation:
                 RemoveHeightObservation(observation);
                 break;
+            case DistanceObservation observation:
+                RemoveDistanceObservation(observation);
+                break;
         }
     }
 
@@ -88,8 +109,27 @@ internal sealed class AdjustmentProject
         Points.Clear();
         Lines.Clear();
         HeightObservations.Clear();
+        DistanceObservations.Clear();
         _pointSerial = 1;
         _heightSerial = 1;
+        _distanceSerial = 1;
+    }
+
+    private void RemoveLineIfUnused(SurveyPoint from, SurveyPoint to)
+    {
+        var hasObservation = HeightObservations.Any(obs => Connects(obs.From, obs.To, from, to))
+            || DistanceObservations.Any(obs => Connects(obs.From, obs.To, from, to));
+
+        if (!hasObservation)
+        {
+            Lines.RemoveAll(line => line.Connects(from, to));
+        }
+    }
+
+    private static bool Connects(SurveyPoint a, SurveyPoint b, SurveyPoint from, SurveyPoint to)
+    {
+        return ReferenceEquals(a, from) && ReferenceEquals(b, to)
+            || ReferenceEquals(a, to) && ReferenceEquals(b, from);
     }
 
     private string NextPointName()
@@ -108,12 +148,23 @@ internal sealed class SurveyPoint
     public required PointF CanvasLocation { get; set; }
     public bool IsHeightFixed { get; set; }
     public double? Height { get; set; }
+    public bool IsCoordinateFixed { get; set; }
+    public double? X { get; set; }
+    public double? Y { get; set; }
 
     public override string ToString()
     {
-        return IsHeightFixed
-            ? $"点 {Name}  已知H={Height:F3}"
-            : $"点 {Name}";
+        if (IsCoordinateFixed)
+        {
+            return $"点 {Name}  已知XY=({X:F3},{Y:F3})";
+        }
+
+        if (IsHeightFixed)
+        {
+            return $"点 {Name}  已知H={Height:F3}";
+        }
+
+        return $"点 {Name}";
     }
 }
 
@@ -140,5 +191,19 @@ internal sealed class HeightObservation
     public override string ToString()
     {
         return $"{Name}: {From.Name}->{To.Name}  Δh={Value:F3}";
+    }
+}
+
+internal sealed class DistanceObservation
+{
+    public required string Name { get; set; }
+    public required SurveyPoint From { get; init; }
+    public required SurveyPoint To { get; init; }
+    public required double Value { get; set; }
+    public required double Sigma { get; set; }
+
+    public override string ToString()
+    {
+        return $"{Name}: {From.Name}-{To.Name}  S={Value:F3}";
     }
 }

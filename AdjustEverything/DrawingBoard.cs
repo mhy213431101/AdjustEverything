@@ -48,7 +48,7 @@ internal sealed class DrawingBoard : Control
 
         DrawGrid(g);
         DrawLines(g);
-        DrawHeightLabels(g);
+        DrawObservationLabels(g);
         DrawPoints(g);
     }
 
@@ -64,11 +64,11 @@ internal sealed class DrawingBoard : Control
             return;
         }
 
-        var observation = HitTestHeightObservation(e.Location);
+        var observation = HitTestObservation(e.Location);
         if (observation is not null)
         {
             SelectObject(observation);
-            StatusChanged?.Invoke(this, $"选中高差观测 {observation.Name}。");
+            StatusChanged?.Invoke(this, $"选中观测 {GetObservationName(observation)}。");
             return;
         }
 
@@ -90,13 +90,18 @@ internal sealed class DrawingBoard : Control
 
         if (_draggingPoint is null || e.Button != MouseButtons.Left)
         {
-            Cursor = HitTestPoint(e.Location) is null && HitTestHeightObservation(e.Location) is null
+            Cursor = HitTestPoint(e.Location) is null && HitTestObservation(e.Location) is null
                 ? Cursors.Cross
                 : Cursors.Hand;
             return;
         }
 
         _draggingPoint.CanvasLocation = new PointF(e.X + _dragOffset.X, e.Y + _dragOffset.Y);
+        if (!_draggingPoint.IsCoordinateFixed)
+        {
+            _draggingPoint.X = _draggingPoint.CanvasLocation.X;
+            _draggingPoint.Y = _draggingPoint.CanvasLocation.Y;
+        }
         ProjectChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -111,20 +116,28 @@ internal sealed class DrawingBoard : Control
         switch (Mode)
         {
             case ToolMode.AddLine:
-                ConnectPoint(point, asHeightObservation: false);
+                ConnectPoint(point, ObservationCreation.None);
                 break;
             case ToolMode.AddHeight:
-                ConnectPoint(point, asHeightObservation: true);
+                ConnectPoint(point, ObservationCreation.Height);
+                break;
+            case ToolMode.AddDistance:
+                ConnectPoint(point, ObservationCreation.Distance);
                 break;
             case ToolMode.FixedHeight:
                 SelectObject(point);
                 point.IsHeightFixed = true;
-                if (!point.Height.HasValue)
-                {
-                    point.Height = 0.0;
-                }
+                point.Height ??= 0.0;
                 ProjectChanged?.Invoke(this, EventArgs.Empty);
                 StatusChanged?.Invoke(this, $"点 {point.Name} 已设为已知高程点，可在属性面板修改高程。");
+                break;
+            case ToolMode.FixedCoordinate:
+                SelectObject(point);
+                point.IsCoordinateFixed = true;
+                point.X ??= point.CanvasLocation.X;
+                point.Y ??= point.CanvasLocation.Y;
+                ProjectChanged?.Invoke(this, EventArgs.Empty);
+                StatusChanged?.Invoke(this, $"点 {point.Name} 已设为已知平面坐标点，可在属性面板修改 X/Y。");
                 break;
             default:
                 SelectObject(point);
@@ -135,7 +148,7 @@ internal sealed class DrawingBoard : Control
         }
     }
 
-    private void ConnectPoint(SurveyPoint point, bool asHeightObservation)
+    private void ConnectPoint(SurveyPoint point, ObservationCreation creation)
     {
         if (_pendingPoint is null)
         {
@@ -152,17 +165,23 @@ internal sealed class DrawingBoard : Control
             return;
         }
 
-        if (!asHeightObservation)
+        switch (creation)
         {
-            _project.AddLine(_pendingPoint, point);
-            StatusChanged?.Invoke(this, $"已添加连线 {_pendingPoint.Name}-{point.Name}。");
-            SelectObject(point);
-        }
-        else
-        {
-            var observation = _project.AddHeightObservation(_pendingPoint, point, 0.0);
-            SelectObject(observation);
-            StatusChanged?.Invoke(this, $"已添加高差观测 {observation.Name}，可在属性面板填写 Δh 和中误差。");
+            case ObservationCreation.Height:
+                var height = _project.AddHeightObservation(_pendingPoint, point, 0.0);
+                SelectObject(height);
+                StatusChanged?.Invoke(this, $"已添加高差观测 {height.Name}，可在属性面板填写 Δh 和中误差。");
+                break;
+            case ObservationCreation.Distance:
+                var distance = _project.AddDistanceObservation(_pendingPoint, point, 0.0);
+                SelectObject(distance);
+                StatusChanged?.Invoke(this, $"已添加距离观测 {distance.Name}，可在属性面板填写距离和中误差。");
+                break;
+            default:
+                _project.AddLine(_pendingPoint, point);
+                SelectObject(point);
+                StatusChanged?.Invoke(this, $"已添加连线 {_pendingPoint.Name}-{point.Name}。");
+                break;
         }
 
         _pendingPoint = null;
@@ -179,13 +198,17 @@ internal sealed class DrawingBoard : Control
         });
     }
 
-    private HeightObservation? HitTestHeightObservation(Point location)
+    private object? HitTestObservation(Point location)
     {
-        return _project.HeightObservations.LastOrDefault(obs =>
+        var distanceObs = _project.DistanceObservations.LastOrDefault(obs =>
+            DistanceToSegment(location, obs.From.CanvasLocation, obs.To.CanvasLocation) <= 8.0);
+        if (distanceObs is not null)
         {
-            var distance = DistanceToSegment(location, obs.From.CanvasLocation, obs.To.CanvasLocation);
-            return distance <= 8.0;
-        });
+            return distanceObs;
+        }
+
+        return _project.HeightObservations.LastOrDefault(obs =>
+            DistanceToSegment(location, obs.From.CanvasLocation, obs.To.CanvasLocation) <= 8.0);
     }
 
     private static double DistanceToSegment(PointF point, PointF a, PointF b)
@@ -202,6 +225,16 @@ internal sealed class DrawingBoard : Control
         var x = a.X + t * dx;
         var y = a.Y + t * dy;
         return Math.Sqrt(Math.Pow(point.X - x, 2) + Math.Pow(point.Y - y, 2));
+    }
+
+    private static string GetObservationName(object value)
+    {
+        return value switch
+        {
+            HeightObservation observation => observation.Name,
+            DistanceObservation observation => observation.Name,
+            _ => "",
+        };
     }
 
     private static void DrawGrid(Graphics g)
@@ -222,10 +255,7 @@ internal sealed class DrawingBoard : Control
     {
         foreach (var line in _project.Lines)
         {
-            var selected = _project.HeightObservations.Any(obs =>
-                ReferenceEquals(SelectedObject, obs)
-                && ReferenceEquals(obs.From, line.From)
-                && ReferenceEquals(obs.To, line.To));
+            var selected = IsLineSelected(line);
 
             using var linePen = new Pen(
                 selected ? Color.FromArgb(31, 94, 184) : Color.FromArgb(36, 45, 52),
@@ -239,19 +269,45 @@ internal sealed class DrawingBoard : Control
         }
     }
 
-    private void DrawHeightLabels(Graphics g)
+    private bool IsLineSelected(BoardLine line)
+    {
+        return SelectedObject switch
+        {
+            HeightObservation obs => ReferenceEquals(obs.From, line.From) && ReferenceEquals(obs.To, line.To),
+            DistanceObservation obs => ReferenceEquals(obs.From, line.From) && ReferenceEquals(obs.To, line.To),
+            _ => false,
+        };
+    }
+
+    private void DrawObservationLabels(Graphics g)
     {
         using var font = new Font("Segoe UI", 11F, FontStyle.Italic);
 
         foreach (var obs in _project.HeightObservations)
         {
-            var mid = new PointF(
-                (obs.From.CanvasLocation.X + obs.To.CanvasLocation.X) / 2F,
-                (obs.From.CanvasLocation.Y + obs.To.CanvasLocation.Y) / 2F);
-            var selected = ReferenceEquals(SelectedObject, obs);
-            using var brush = new SolidBrush(selected ? Color.FromArgb(31, 94, 184) : Color.FromArgb(30, 36, 42));
-            g.DrawString(obs.Name, font, brush, mid.X + 6, mid.Y - 18);
+            DrawObservationLabel(g, font, obs.From, obs.To, obs.Name, -18, ReferenceEquals(SelectedObject, obs));
         }
+
+        foreach (var obs in _project.DistanceObservations)
+        {
+            DrawObservationLabel(g, font, obs.From, obs.To, obs.Name, 4, ReferenceEquals(SelectedObject, obs));
+        }
+    }
+
+    private static void DrawObservationLabel(
+        Graphics g,
+        Font font,
+        SurveyPoint from,
+        SurveyPoint to,
+        string label,
+        float offsetY,
+        bool selected)
+    {
+        var mid = new PointF(
+            (from.CanvasLocation.X + to.CanvasLocation.X) / 2F,
+            (from.CanvasLocation.Y + to.CanvasLocation.Y) / 2F);
+        using var brush = new SolidBrush(selected ? Color.FromArgb(31, 94, 184) : Color.FromArgb(30, 36, 42));
+        g.DrawString(label, font, brush, mid.X + 6, mid.Y + offsetY);
     }
 
     private void DrawPoints(Graphics g)
@@ -262,9 +318,11 @@ internal sealed class DrawingBoard : Control
             var isPending = ReferenceEquals(point, _pendingPoint);
             var isSelected = ReferenceEquals(point, SelectedObject);
 
-            using var fill = new SolidBrush(point.IsHeightFixed
-                ? Color.FromArgb(20, 83, 45)
-                : Color.White);
+            using var fill = new SolidBrush(point.IsCoordinateFixed
+                ? Color.FromArgb(36, 78, 160)
+                : point.IsHeightFixed
+                    ? Color.FromArgb(20, 83, 45)
+                    : Color.White);
             using var outline = new Pen(
                 isPending ? Color.FromArgb(220, 120, 20) : isSelected ? Color.FromArgb(31, 94, 184) : Color.Black,
                 isPending || isSelected ? 3.2F : 2F);
@@ -272,7 +330,7 @@ internal sealed class DrawingBoard : Control
             g.FillEllipse(fill, rect);
             g.DrawEllipse(outline, rect);
 
-            if (point.IsHeightFixed)
+            if (point.IsHeightFixed || point.IsCoordinateFixed)
             {
                 using var knownPen = new Pen(isSelected ? Color.FromArgb(31, 94, 184) : Color.Black, 2F);
                 g.DrawEllipse(knownPen, center.X - PointRadius - 6, center.Y - PointRadius - 6, (PointRadius + 6) * 2, (PointRadius + 6) * 2);
@@ -282,11 +340,23 @@ internal sealed class DrawingBoard : Control
             using var textBrush = new SolidBrush(Color.Black);
             g.DrawString(point.Name, nameFont, textBrush, center.X + 12, center.Y + 8);
 
+            using var valueFont = new Font("Segoe UI", 8.5F);
+            if (point.IsCoordinateFixed && point.X.HasValue && point.Y.HasValue)
+            {
+                g.DrawString($"X={point.X.Value:F2}, Y={point.Y.Value:F2}", valueFont, textBrush, center.X + 12, center.Y - 28);
+            }
+
             if (point.Height.HasValue)
             {
-                using var heightFont = new Font("Segoe UI", 8.5F);
-                g.DrawString($"H={point.Height.Value:F3}", heightFont, textBrush, center.X + 12, center.Y - 14);
+                g.DrawString($"H={point.Height.Value:F3}", valueFont, textBrush, center.X + 12, center.Y - 14);
             }
         }
+    }
+
+    private enum ObservationCreation
+    {
+        None,
+        Height,
+        Distance,
     }
 }
