@@ -1,5 +1,6 @@
 namespace AdjustEverything;
 
+// 主窗体负责把 UI 控件、画板、项目数据、检查器和求解器串起来。
 public partial class Form1 : Form
 {
     private readonly AdjustmentProject _project = new();
@@ -35,6 +36,7 @@ public partial class Form1 : Form
         };
         _board.ProjectChanged += (_, _) =>
         {
+            // 画板改动项目数据后，列表和属性面板都要同步刷新。
             RefreshProjectViews();
             ShowSelectionProperties(_board.SelectedObject);
         };
@@ -62,6 +64,7 @@ public partial class Form1 : Form
 
     private void BuildLayout()
     {
+        // 整体布局：左侧工具栏，上方对象/属性/结果区，中间大画板。
         Controls.Clear();
 
         var root = new TableLayoutPanel
@@ -306,6 +309,7 @@ public partial class Form1 : Form
 
     private void LoadSampleNetwork()
     {
+        // 示例网同时包含高程观测和距离观测，便于测试两个求解器。
         _project.Clear();
 
         var a = _project.AddPoint("A", new PointF(250, 250));
@@ -349,6 +353,7 @@ public partial class Form1 : Form
 
     private void RefreshProjectViews()
     {
+        // 对象列表不直接保存副本，只保存对模型对象的引用，选中后可回到原对象编辑。
         var selected = _board.SelectedObject;
         _syncingObjectList = true;
         _objectList.Items.Clear();
@@ -392,6 +397,7 @@ public partial class Form1 : Form
 
     private void ShowSelectionProperties(object? selected)
     {
+        // 属性面板根据对象类型动态生成，后续添加角度观测时也可以沿用这个模式。
         _propertyPanel.Controls.Clear();
 
         switch (selected)
@@ -663,6 +669,7 @@ public partial class Form1 : Form
 
     private void RunHeightAdjustment()
     {
+        // 先诊断再求解，避免把基准不足、孤立点等建模问题交给矩阵求解器处理。
         var validation = ProjectDiagnostics.ValidateHeightNetwork(_project);
         if (validation.HasErrors)
         {
@@ -688,6 +695,7 @@ public partial class Form1 : Form
 
     private void RunDistanceAdjustment()
     {
+        // 测边网同样先做可解性检查，再进入非线性迭代。
         var validation = ProjectDiagnostics.ValidateDistanceNetwork(_project);
         if (validation.HasErrors)
         {

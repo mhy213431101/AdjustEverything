@@ -1,5 +1,6 @@
 namespace AdjustEverything;
 
+// 项目的核心数据容器。画板、属性面板和求解器都围绕这个对象读写数据。
 internal sealed class AdjustmentProject
 {
     private int _pointSerial = 1;
@@ -11,6 +12,7 @@ internal sealed class AdjustmentProject
     public List<DistanceObservation> DistanceObservations { get; } = [];
     public List<BoardLine> Lines { get; } = [];
 
+    // 画板坐标先作为点的近似 X/Y，后续测边网迭代会在这个基础上改正。
     public SurveyPoint AddPoint(string? name, PointF canvasLocation)
     {
         var point = new SurveyPoint
@@ -70,6 +72,7 @@ internal sealed class AdjustmentProject
 
     public void RemovePoint(SurveyPoint point)
     {
+        // 删除点时，需要同时删除依附在该点上的观测和视觉连线。
         HeightObservations.RemoveAll(obs => ReferenceEquals(obs.From, point) || ReferenceEquals(obs.To, point));
         DistanceObservations.RemoveAll(obs => ReferenceEquals(obs.From, point) || ReferenceEquals(obs.To, point));
         Lines.RemoveAll(line => ReferenceEquals(line.From, point) || ReferenceEquals(line.To, point));
@@ -117,6 +120,7 @@ internal sealed class AdjustmentProject
 
     private void RemoveLineIfUnused(SurveyPoint from, SurveyPoint to)
     {
+        // 一条线可能同时挂有高差观测和距离观测；只有没有任何观测引用它时才移除。
         var hasObservation = HeightObservations.Any(obs => Connects(obs.From, obs.To, from, to))
             || DistanceObservations.Any(obs => Connects(obs.From, obs.To, from, to));
 
@@ -141,6 +145,7 @@ internal sealed class AdjustmentProject
     }
 }
 
+// 一个点同时承担三种角色：画板节点、高程未知/已知点、平面坐标未知/已知点。
 internal sealed class SurveyPoint
 {
     public required Guid Id { get; init; }
@@ -180,6 +185,7 @@ internal sealed class BoardLine(SurveyPoint from, SurveyPoint to)
     }
 }
 
+// 高差观测：From -> To 的观测高差，方程为 H_To - H_From = Δh + v。
 internal sealed class HeightObservation
 {
     public required string Name { get; set; }
@@ -194,6 +200,7 @@ internal sealed class HeightObservation
     }
 }
 
+// 距离观测：From-To 的水平距离，方程为 S = sqrt(dx^2 + dy^2) + v。
 internal sealed class DistanceObservation
 {
     public required string Name { get; set; }

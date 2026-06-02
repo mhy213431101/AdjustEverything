@@ -11,6 +11,7 @@ internal sealed class HeightAdjustmentResult
 
 internal static class HeightNetworkSolver
 {
+    // 高程网是线性模型，不需要迭代。未知量是所有非已知点的 H。
     public static HeightAdjustmentResult Solve(AdjustmentProject project)
     {
         var report = new StringBuilder();
@@ -44,6 +45,7 @@ internal static class HeightNetworkSolver
             .Select((point, i) => new { point, i })
             .ToDictionary(item => item.point, item => item.i);
 
+        // 直接组装法方程 N x = W。这里的 x 实际就是未知点高程值。
         var normal = new double[unknownPoints.Count, unknownPoints.Count];
         var rhs = new double[unknownPoints.Count];
         var rows = new List<EquationRow>();
@@ -53,6 +55,7 @@ internal static class HeightNetworkSolver
             var coefficients = new double[unknownPoints.Count];
             var knownContribution = 0.0;
 
+            // 高差方程：H_To - H_From = Δh。已知点移到常数项，未知点进入系数矩阵。
             AddCoefficient(obs.To, 1.0);
             AddCoefficient(obs.From, -1.0);
 
@@ -101,6 +104,7 @@ internal static class HeightNetworkSolver
         var residuals = new List<(HeightObservation Observation, double Residual)>();
         foreach (var row in rows)
         {
+            // 改正数 v = 平差后计算值 - 观测值。
             var computed = 0.0;
             for (var i = 0; i < unknownPoints.Count; i++)
             {

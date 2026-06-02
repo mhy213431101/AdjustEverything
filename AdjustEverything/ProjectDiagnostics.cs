@@ -44,6 +44,7 @@ internal sealed class ProjectValidationResult
 
 internal static class ProjectDiagnostics
 {
+    // 诊断器只负责“能不能算、哪里有问题”，不参与真正的平差计算。
     public static ProjectValidationResult ValidateHeightNetwork(AdjustmentProject project)
     {
         var result = new ProjectValidationResult();
@@ -136,6 +137,7 @@ internal static class ProjectDiagnostics
 
         if (fixedPoints.Count < 2)
         {
+            // 当前测边网暂不做自由网，因此先要求两个已知点固定平移、旋转和尺度基准。
             result.Diagnostics.Add(new ProjectDiagnostic(DiagnosticSeverity.Error, "测边网暂时要求至少两个已知平面坐标点作为基准。"));
         }
 
@@ -241,6 +243,7 @@ internal static class ProjectDiagnostics
         Func<SurveyPoint, bool> isUnknown,
         string networkName)
     {
+        // 连通性检查按观测类型分别做；高程网只看高差边，测边网只看距离边。
         var visited = new HashSet<SurveyPoint>();
 
         foreach (var start in project.Points)

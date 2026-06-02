@@ -16,6 +16,7 @@ internal static class DistanceNetworkSolver
     private const int MaxIterations = 30;
     private const double Tolerance = 1e-8;
 
+    // 测边网是非线性模型，需要用当前近似坐标线性化并迭代改正。
     public static DistanceAdjustmentResult Solve(AdjustmentProject project)
     {
         var report = new StringBuilder();
@@ -35,6 +36,7 @@ internal static class DistanceNetworkSolver
 
         foreach (var point in project.Points)
         {
+            // 初值优先取属性面板中的 X/Y；如果没有填写，就退回画板坐标。
             coordinates[point] = new PointD(
                 point.X ?? point.CanvasLocation.X,
                 point.Y ?? point.CanvasLocation.Y);
@@ -46,6 +48,7 @@ internal static class DistanceNetworkSolver
 
         for (iterations = 1; iterations <= MaxIterations; iterations++)
         {
+            // 每轮迭代都要基于最新坐标重新计算 A、l 和法方程。
             var normal = new double[parameterCount, parameterCount];
             var rhs = new double[parameterCount];
 
@@ -63,6 +66,7 @@ internal static class DistanceNetworkSolver
             var maxCorrection = 0.0;
             foreach (var point in unknownPoints)
             {
+                // dx/dy 是本轮坐标改正数，不是观测残差。
                 var index = parameterIndex[point];
                 var current = coordinates[point];
                 var dx = correction[index];
@@ -162,16 +166,19 @@ internal static class DistanceNetworkSolver
         var coefficients = new double[parameterCount];
         if (parameterIndex.TryGetValue(obs.From, out var fromIndex))
         {
+            // S 对起点坐标的偏导：[-dx/S, -dy/S]。
             coefficients[fromIndex] = -dx / distance;
             coefficients[fromIndex + 1] = -dy / distance;
         }
 
         if (parameterIndex.TryGetValue(obs.To, out var toIndex))
         {
+            // S 对终点坐标的偏导：[dx/S, dy/S]。
             coefficients[toIndex] = dx / distance;
             coefficients[toIndex + 1] = dy / distance;
         }
 
+        // 右端项 l = 观测距离 - 当前近似距离。
         var rightSide = obs.Value - distance;
         var weight = obs.Sigma <= 0 ? 1.0 : 1.0 / (obs.Sigma * obs.Sigma);
         return new EquationRow(coefficients, rightSide, weight);
@@ -186,6 +193,7 @@ internal static class DistanceNetworkSolver
 
     private static void Accumulate(double[,] normal, double[] rhs, double[] coefficients, double rightSide, double weight)
     {
+        // 累加 N=A'PA 和 W=A'Pl。当前版本只支持独立观测，所以 P 是对角权。
         for (var i = 0; i < rhs.Length; i++)
         {
             rhs[i] += weight * coefficients[i] * rightSide;
