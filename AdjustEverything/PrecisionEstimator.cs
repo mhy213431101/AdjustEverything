@@ -5,7 +5,7 @@ namespace AdjustEverything;
 
 internal static class PrecisionEstimator
 {
-    public static PrecisionResult Estimate(AdjustmentResultBase result)
+    public static PrecisionResult Estimate(LeastSquaresResult result)
     {       
         if (result.r <= 0)
         {

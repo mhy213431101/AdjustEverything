@@ -8,15 +8,17 @@ internal sealed class LeastSquaresResult
 
     public int r { get; init; }
 
-    public double[,] N { get; init; }
-        = new double[0, 0];
+    public double[,] N { get; init; } = new double[0, 0];
 
-    public double[] U { get; init; }
-        = [];
+    public double[] U { get; init; } = [];
 
-    public double[] xHat { get; init; }
-        = [];
+    public double[] xHat { get; init; } = [];
 
-    public double[] V { get; init; }
-        = [];
+    public double[] V { get; init; } = [];
+
+    public double[,] B { get; init; } = new double [0, 0];
+
+    public double[,] P { get; init; } = new double[0, 0];
+
+    public double[] W { get; init; } = [];
 }

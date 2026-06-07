@@ -1,4 +1,8 @@
-﻿//最小二乘运算核心
+﻿/// <summary>
+/// 最小二乘运算核心
+/// 负责解线性方程组
+/// </summary>
+
 namespace AdjustEverything;
 
 internal static class LeastSquaresSolver
@@ -8,14 +12,11 @@ internal static class LeastSquaresSolver
         double[] l,
         double[,] P)
     {
-        int n =
-            B.GetLength(0);
+        int n = B.GetLength(0);
 
-        int t =
-            B.GetLength(1);
+        int t = B.GetLength(1);
 
-        int r =
-            n - t;
+        int r = n - t;
 
         var Bt =
             MatrixUtility.Transpose(B);
@@ -63,7 +64,15 @@ internal static class LeastSquaresSolver
 
             xHat = xHat,
 
-            V = V
+            V = V,
+
+            B = B,
+
+            P = P,
+
+            W = l
+
+
         };
     }
 }

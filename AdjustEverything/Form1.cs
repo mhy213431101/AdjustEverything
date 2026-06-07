@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace AdjustEverything;
 
 public partial class Form1 : Form
@@ -715,6 +717,7 @@ public partial class Form1 : Form
     private void RunHeightAdjustment()
     {
         var validation = ProjectDiagnostics.ValidateHeightNetwork(_project);
+
         if (validation.HasErrors)
         {
             _resultBox.Text = validation.ToReport("高程网检查");
@@ -722,16 +725,77 @@ public partial class Form1 : Form
             return;
         }
 
-        var result = HeightNetworkSolver.Solve(_project);
-        var precision = PrecisionEstimator.Estimate(result);
+        //1. 构造输入数据
+        var fixedPoints = _project.Points
+            .Where(p => p.IsHeightFixed && p.Height.HasValue)
+            .ToList();
 
-        _resultBox.Text = validation.ToReport("高程网检查") + Environment.NewLine + Environment.NewLine + result.Report + precision.Report;
+        var unknownPoints = _project.Points
+            .Where(p => !p.IsHeightFixed)
+            .ToList();
+
+        var observations = _project.HeightObservations.ToList();
+
+        var index = unknownPoints
+            .Select((p, i) => (p, i))
+            .ToDictionary(x => x.p, x => x.i);
+
+        var X0 = new double[unknownPoints.Count];
+
+        for (int i = 0; i < unknownPoints.Count; i++)
+        {
+            X0[i] = unknownPoints[i].Height ?? 0.0;
+        }
+
+        //2. 导入模型
+        var model = new HeightModel(
+            unknownPoints,
+            observations,
+            index,
+            X0);
+
+        //3. 完成平差
+        var result = NonlinearLeastSquaresSolver.Solve(model, model);
+
+        //4. 精度评定
+        var precision = PrecisionEstimator.Estimate(result.LS);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("高程网平差结果");
+        sb.AppendLine();
+
+        sb.AppendLine($"观测数 n = {observations.Count}");
+        sb.AppendLine($"未知数 t = {unknownPoints.Count}");
+        sb.AppendLine($"多余观测 r = {observations.Count - unknownPoints.Count}");
+
+        sb.AppendLine();
+        sb.AppendLine("未知点高程：");
+        for (int i = 0; i < unknownPoints.Count; i++)
+        {
+            sb.AppendLine(
+                $"{unknownPoints[i].Name,-4}  " +
+                $"H={result.XHat[i]:F4} m");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("观测改正数");
+
+        for (int i = 0; i < result.LS.V.Length; i++)
+        {
+            sb.AppendLine(
+                $"{observations[i].Name,-4}  " +
+                $"v={1000 * result.LS.V[i]:F1} mm");
+        }
+
+        sb.AppendLine(precision.Report);
+
+        _resultBox.Text = sb.ToString();
 
         if (result.Success)
         {
-            foreach (var item in result.AdjustedHeights)
+            for (int i = 0; i < unknownPoints.Count; i++)
             {
-                item.Key.Height = item.Value;
+                unknownPoints[i].Height = result.XHat[i];
             }
         }
 
@@ -741,30 +805,133 @@ public partial class Form1 : Form
 
     private void RunDistanceAdjustment()
     {
-        var validation = ProjectDiagnostics.ValidateDistanceNetwork(_project);
+        var validation =
+            ProjectDiagnostics.ValidateDistanceNetwork(_project);
+
         if (validation.HasErrors)
         {
-            _resultBox.Text = validation.ToReport("测边网检查");
-            _statusLabel.Text = "测边网检查未通过，请根据结果面板中的错误修改模型。";
+            _resultBox.Text =
+                validation.ToReport("测边网检查");
+
+            _statusLabel.Text =
+                "测边网检查未通过，请根据结果面板中的错误修改模型。";
+
             return;
         }
 
-        var result = DistanceNetworkSolver.Solve(_project);
-        var precision = PrecisionEstimator.Estimate(result);
+        var fixedPoints =
+            _project.Points
+                .Where(p =>
+                    p.IsCoordinateFixed &&
+                    p.X.HasValue &&
+                    p.Y.HasValue)
+                .ToList();
 
-        _resultBox.Text = validation.ToReport("测边网检查") + Environment.NewLine + Environment.NewLine + result.Report + precision.Report;
+        var unknownPoints =
+            _project.Points
+                .Where(p => !p.IsCoordinateFixed)
+                .ToList();
+
+        var observations =
+            _project.DistanceObservations
+                .ToList();
+
+        var parameterIndex = new Dictionary<SurveyPoint, int>();
+
+        for (int i = 0; i < unknownPoints.Count; i++)
+        {
+            parameterIndex[unknownPoints[i]] = 2 * i;
+        }
+
+        var x0 = new double[unknownPoints.Count * 2];
+
+        for (int i = 0; i < unknownPoints.Count; i++)
+        {
+            var point = unknownPoints[i];
+
+            x0[2 * i] =
+                point.X
+                ?? point.CanvasLocation.X;
+
+            x0[2 * i + 1] =
+                point.Y
+                ?? point.CanvasLocation.Y;
+        }
+
+        var model =
+            new DistanceModel(
+                unknownPoints,
+                observations,
+                parameterIndex,
+                x0);
+
+        var result = NonlinearLeastSquaresSolver.Solve(model, model);
+
+        var precision = PrecisionEstimator.Estimate(result.LS);
+
+        var sb = new StringBuilder();
+
+        sb.AppendLine(validation.ToReport("测边网平差结果"));
+
+        sb.AppendLine($"观测数 n = {observations.Count}");
+        sb.AppendLine($"未知数 t = {unknownPoints.Count}");
+        sb.AppendLine($"多余观测 r = {observations.Count - unknownPoints.Count}");
+        sb.AppendLine();
+
+        sb.AppendLine(result.Report);
+
+        sb.AppendLine("未知点坐标：");
+
+        for (int i = 0; i < unknownPoints.Count; i++)
+        {
+            var p = unknownPoints[i];
+
+            sb.AppendLine(
+                $"{p.Name,-6} " +
+                $"X={result.XHat[2 * i]:F4} " +
+                $"Y={result.XHat[2 * i + 1]:F4}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("观测改正数 v(mm)");
+
+        var v = result.LS.V;
+
+        for (int i = 0; i < observations.Count; i++)
+        {
+            sb.AppendLine(
+                $"{observations[i].Name,-6} " +
+                $"v={v[i] * 1000:F1}");
+        }
+
+        sb.AppendLine(precision.Report);
+
+        _resultBox.Text = sb.ToString();
 
         if (result.Success)
         {
-            foreach (var item in result.AdjustedCoordinates)
+            for (int i = 0; i < unknownPoints.Count; i++)
             {
-                item.Key.X = item.Value.X;
-                item.Key.Y = item.Value.Y;
+                unknownPoints[i].X =
+                    result.XHat[2 * i];
+
+                unknownPoints[i].Y =
+                    result.XHat[2 * i + 1];
             }
+
+            _statusLabel.Text =
+                $"测边网平差完成（迭代 {result.Iterations} 次）";
+        }
+        else
+        {
+            _statusLabel.Text =
+                "测边网平差未收敛";
         }
 
         RefreshProjectViews();
-        ShowSelectionProperties(_board.SelectedObject);
+
+        ShowSelectionProperties(
+            _board.SelectedObject);
     }
 
     private void RunHeightNetworkCheck()

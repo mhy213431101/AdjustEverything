@@ -8,10 +8,7 @@ internal static class LeastSquaresAdjustment
         AdjustmentModel model)
     {
         var ls =
-            LeastSquaresSolver.Solve(
-                model.B,
-                model.l,
-                model.P);
+            LeastSquaresSolver.Solve(model.B, model.l, model.P);
 
         return new AdjustmentResultBase
         {

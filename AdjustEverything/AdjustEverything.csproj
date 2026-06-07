@@ -8,4 +8,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="AdjustmentResultBase.cs" />
+    <Compile Remove="DistanceNetworkSolver.cs" />
+    <Compile Remove="LeastSquaresAdjustment.cs" />
+    <Compile Remove="LinearModel.cs" />
+  </ItemGroup>
+
 </Project>
