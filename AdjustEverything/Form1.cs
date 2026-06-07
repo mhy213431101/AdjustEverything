@@ -1,6 +1,5 @@
 namespace AdjustEverything;
 
-// 主窗体负责把 UI 控件、画板、项目数据、检查器和求解器串起来。
 public partial class Form1 : Form
 {
     private readonly AdjustmentProject _project = new();
@@ -36,7 +35,6 @@ public partial class Form1 : Form
         };
         _board.ProjectChanged += (_, _) =>
         {
-            // 画板改动项目数据后，列表和属性面板都要同步刷新。
             RefreshProjectViews();
             ShowSelectionProperties(_board.SelectedObject);
         };
@@ -64,7 +62,6 @@ public partial class Form1 : Form
 
     private void BuildLayout()
     {
-        // 整体布局：左侧工具栏，上方对象/属性/结果区，中间大画板。
         Controls.Clear();
 
         var root = new TableLayoutPanel
@@ -309,7 +306,6 @@ public partial class Form1 : Form
 
     private void LoadSampleNetwork()
     {
-        // 示例网同时包含高程观测和距离观测，便于测试两个求解器。
         _project.Clear();
 
         var a = _project.AddPoint("A", new PointF(250, 250));
@@ -326,24 +322,24 @@ public partial class Form1 : Form
         a.X = 0.000;
         a.Y = 0.000;
         b.IsCoordinateFixed = true;
-        b.X = 300.000;
-        b.Y = 0.000;
-        c.X = 130.000;
-        c.Y = 130.000;
-        d.X = 160.000;
-        d.Y = -70.000;
+        b.X = 0.000;
+        b.Y = 300.000;
+        c.X = -180.000;
+        c.Y = 80.000;
+        d.X = 250.000;
+        d.Y = 220.000;
 
-        _project.AddHeightObservation(a, c, 1.215);
-        _project.AddHeightObservation(a, d, 0.385);
-        _project.AddHeightObservation(d, c, 0.821);
-        _project.AddHeightObservation(c, b, 0.028);
-        _project.AddHeightObservation(d, b, 0.842);
+        _project.AddHeightObservation(a, c, 1.215, 1.8);
+        _project.AddHeightObservation(a, d, 0.385, 1.7);
+        _project.AddHeightObservation(d, c, 0.821, 2.0);
+        _project.AddHeightObservation(c, b, 0.028, 2.3);
+        _project.AddHeightObservation(d, b, 0.842, 1.7);
 
-        _project.AddDistanceObservation(a, c, 184.3909);
-        _project.AddDistanceObservation(c, b, 228.0351);
-        _project.AddDistanceObservation(a, d, 170.0000);
-        _project.AddDistanceObservation(d, b, 170.0000);
-        _project.AddDistanceObservation(c, d, 202.0000);
+        _project.AddDistanceObservation(a, c, 196.977);
+        _project.AddDistanceObservation(c, b, 284.250);
+        _project.AddDistanceObservation(a, d, 333.017);
+        _project.AddDistanceObservation(d, b, 262.489);
+        _project.AddDistanceObservation(c, d, 452.214);
 
         _board.ClearSelection();
         RefreshProjectViews();
@@ -353,7 +349,6 @@ public partial class Form1 : Form
 
     private void RefreshProjectViews()
     {
-        // 对象列表不直接保存副本，只保存对模型对象的引用，选中后可回到原对象编辑。
         var selected = _board.SelectedObject;
         _syncingObjectList = true;
         _objectList.Items.Clear();
@@ -397,7 +392,6 @@ public partial class Form1 : Form
 
     private void ShowSelectionProperties(object? selected)
     {
-        // 属性面板根据对象类型动态生成，后续添加角度观测时也可以沿用这个模式。
         _propertyPanel.Controls.Clear();
 
         switch (selected)
@@ -428,7 +422,7 @@ public partial class Form1 : Form
         var nameBox = AddTextRow(table, "点名", point.Name);
 
         var fixedHeightCheck = AddCheckRow(table, "作为已知高程点", point.IsHeightFixed);
-        var heightBox = AddTextRow(table, "高程 H", point.Height?.ToString("F4") ?? "");
+        var heightBox = AddTextRow(table, "高程 H(m)", point.Height?.ToString("F4") ?? "");
 
         var fixedCoordinateCheck = AddCheckRow(table, "作为已知平面坐标点", point.IsCoordinateFixed);
         var xBox = AddTextRow(table, "X", point.X?.ToString("F4") ?? "");
@@ -444,7 +438,7 @@ public partial class Form1 : Form
                 return;
             }
 
-            if (!TryReadNullableDouble(heightBox.Text, "高程 H", out var height)
+            if (!TryReadNullableDouble(heightBox.Text, "高程 H(m)", out var height)
                 || !TryReadNullableDouble(xBox.Text, "X", out var x)
                 || !TryReadNullableDouble(yBox.Text, "Y", out var y))
             {
@@ -472,20 +466,22 @@ public partial class Form1 : Form
         var nameBox = AddTextRow(table, "观测名", observation.Name);
         AddReadonlyRow(table, "起点", observation.From.Name);
         AddReadonlyRow(table, "终点", observation.To.Name);
-        var valueBox = AddTextRow(table, "高差 Δh", observation.Value.ToString("F4"));
-        var sigmaBox = AddTextRow(table, "中误差 σ", observation.Sigma.ToString("F4"));
+        var valueBox = AddTextRow(table, "高差 Δh(m)", observation.Value.ToString("F4"));
+        var lengthBox = AddTextRow(table, "测段长度 S(km)", observation.Length.ToString("F4"));
+        var sigmaBox = AddTextRow(table, "中误差 m(可选)", observation.Sigma.ToString("F4"));
         var apply = AddApplyButton(table);
         var delete = AddDeleteButton(table);
 
         apply.Click += (_, _) =>
         {
-            if (!ReadObservationCommon(nameBox, valueBox, sigmaBox, "高差 Δh", out var name, out var value, out var sigma))
+            if (!ReadObservationHeight(nameBox, valueBox, lengthBox, sigmaBox, "高差 Δh(m)", out var name, out var value, out var length, out var sigma))
             {
                 return;
             }
 
             observation.Name = name;
             observation.Value = value;
+            observation.Length = length;
             observation.Sigma = sigma;
             RefreshProjectViews();
             _board.SelectObject(observation);
@@ -502,14 +498,14 @@ public partial class Form1 : Form
         var nameBox = AddTextRow(table, "观测名", observation.Name);
         AddReadonlyRow(table, "起点", observation.From.Name);
         AddReadonlyRow(table, "终点", observation.To.Name);
-        var valueBox = AddTextRow(table, "距离 S", observation.Value.ToString("F4"));
+        var valueBox = AddTextRow(table, "距离 S(m)", observation.Value.ToString("F4"));
         var sigmaBox = AddTextRow(table, "中误差 σ", observation.Sigma.ToString("F4"));
         var apply = AddApplyButton(table);
         var delete = AddDeleteButton(table);
 
         apply.Click += (_, _) =>
         {
-            if (!ReadObservationCommon(nameBox, valueBox, sigmaBox, "距离 S", out var name, out var value, out var sigma))
+            if (!ReadObservationDistance(nameBox, valueBox, sigmaBox, "距离 S(m)", out var name, out var value, out var sigma))
             {
                 return;
             }
@@ -571,13 +567,19 @@ public partial class Form1 : Form
     private static void AddRow(TableLayoutPanel table, string label, Control control)
     {
         var row = table.RowCount++;
-        table.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
-        table.Controls.Add(new Label
+
+        table.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        var lbl = new Label
         {
             Text = label,
             Dock = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleLeft,
-        }, 0, row);
+            AutoSize = true,
+            MaximumSize = new Size(0, 0)
+        };
+
+        table.Controls.Add(lbl, 0, row);
         table.Controls.Add(control, 1, row);
     }
 
@@ -614,14 +616,57 @@ public partial class Form1 : Form
         return button;
     }
 
-    private static bool ReadObservationCommon(
+    private static bool ReadObservationHeight(
         TextBox nameBox,
         TextBox valueBox,
+        TextBox lengthBox,
         TextBox sigmaBox,
         string valueLabel,
         out string name,
         out double value,
+        out double length,
         out double sigma)
+    {
+        name = nameBox.Text.Trim();
+        value = 0;
+        length = 0;
+        sigma = 0;
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            MessageBox.Show("观测名不能为空。", "属性错误", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+
+        if (!double.TryParse(valueBox.Text, out value))
+        {
+            MessageBox.Show($"{valueLabel} 必须是数字。", "属性错误", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+
+        if (!double.TryParse(lengthBox.Text, out length) || length <= 0)
+        {
+            MessageBox.Show($"测段长度 S 必须是大于 0 的数字。", "属性错误", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+
+        if (!double.TryParse(sigmaBox.Text, out sigma) || sigma <= 0)
+        {
+            MessageBox.Show("中误差 m 必须是大于 0 的数字。", "属性错误", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool ReadObservationDistance(
+    TextBox nameBox,
+    TextBox valueBox,
+    TextBox sigmaBox,
+    string valueLabel,
+    out string name,
+    out double value,
+    out double sigma)
     {
         name = nameBox.Text.Trim();
         value = 0;
@@ -641,7 +686,7 @@ public partial class Form1 : Form
 
         if (!double.TryParse(sigmaBox.Text, out sigma) || sigma <= 0)
         {
-            MessageBox.Show("中误差 σ 必须是大于 0 的数字。", "属性错误", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("中误差 m 必须是大于 0 的数字。", "属性错误", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
         }
 
@@ -669,7 +714,6 @@ public partial class Form1 : Form
 
     private void RunHeightAdjustment()
     {
-        // 先诊断再求解，避免把基准不足、孤立点等建模问题交给矩阵求解器处理。
         var validation = ProjectDiagnostics.ValidateHeightNetwork(_project);
         if (validation.HasErrors)
         {
@@ -679,7 +723,9 @@ public partial class Form1 : Form
         }
 
         var result = HeightNetworkSolver.Solve(_project);
-        _resultBox.Text = validation.ToReport("高程网检查") + Environment.NewLine + Environment.NewLine + result.Report;
+        var precision = PrecisionEstimator.Estimate(result);
+
+        _resultBox.Text = validation.ToReport("高程网检查") + Environment.NewLine + Environment.NewLine + result.Report + precision.Report;
 
         if (result.Success)
         {
@@ -695,7 +741,6 @@ public partial class Form1 : Form
 
     private void RunDistanceAdjustment()
     {
-        // 测边网同样先做可解性检查，再进入非线性迭代。
         var validation = ProjectDiagnostics.ValidateDistanceNetwork(_project);
         if (validation.HasErrors)
         {
@@ -705,7 +750,9 @@ public partial class Form1 : Form
         }
 
         var result = DistanceNetworkSolver.Solve(_project);
-        _resultBox.Text = validation.ToReport("测边网检查") + Environment.NewLine + Environment.NewLine + result.Report;
+        var precision = PrecisionEstimator.Estimate(result);
+
+        _resultBox.Text = validation.ToReport("测边网检查") + Environment.NewLine + Environment.NewLine + result.Report + precision.Report;
 
         if (result.Success)
         {

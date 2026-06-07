@@ -2,7 +2,6 @@ using System.Drawing.Drawing2D;
 
 namespace AdjustEverything;
 
-// 自绘画板控件。它只负责交互和显示，真正的数据保存在 AdjustmentProject 中。
 internal sealed class DrawingBoard : Control
 {
     private const float PointRadius = 9F;
@@ -47,7 +46,6 @@ internal sealed class DrawingBoard : Control
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.Clear(BackColor);
 
-        // 绘制顺序很重要：先网格，再线和观测标注，最后画点，保证点始终在最上层。
         DrawGrid(g);
         DrawLines(g);
         DrawObservationLabels(g);
@@ -59,7 +57,6 @@ internal sealed class DrawingBoard : Control
         base.OnMouseDown(e);
         Focus();
 
-        // 点击优先级：点 > 观测线 > 空白区域。这样拖动点时不会被线段误选中。
         var point = HitTestPoint(e.Location);
         if (point is not null)
         {
@@ -102,7 +99,6 @@ internal sealed class DrawingBoard : Control
         _draggingPoint.CanvasLocation = new PointF(e.X + _dragOffset.X, e.Y + _dragOffset.Y);
         if (!_draggingPoint.IsCoordinateFixed)
         {
-            // 非已知坐标点拖动后，同步更新近似坐标，给测边网迭代提供初值。
             _draggingPoint.X = _draggingPoint.CanvasLocation.X;
             _draggingPoint.Y = _draggingPoint.CanvasLocation.Y;
         }
@@ -156,7 +152,6 @@ internal sealed class DrawingBoard : Control
     {
         if (_pendingPoint is null)
         {
-            // 高差/距离/普通线都采用“两次点选”的创建方式：先记住起点，再等终点。
             _pendingPoint = point;
             SelectObject(point);
             StatusChanged?.Invoke(this, $"已选择起点 {point.Name}，请再选择终点。");
@@ -173,7 +168,7 @@ internal sealed class DrawingBoard : Control
         switch (creation)
         {
             case ObservationCreation.Height:
-                var height = _project.AddHeightObservation(_pendingPoint, point, 0.0);
+                var height = _project.AddHeightObservation(_pendingPoint, point, 0.0, 0.0);
                 SelectObject(height);
                 StatusChanged?.Invoke(this, $"已添加高差观测 {height.Name}，可在属性面板填写 Δh 和中误差。");
                 break;
@@ -205,7 +200,6 @@ internal sealed class DrawingBoard : Control
 
     private object? HitTestObservation(Point location)
     {
-        // 距离观测后画在标签下方，命中时优先选距离观测，便于同一条线上同时存在 h 和 s。
         var distanceObs = _project.DistanceObservations.LastOrDefault(obs =>
             DistanceToSegment(location, obs.From.CanvasLocation, obs.To.CanvasLocation) <= 8.0);
         if (distanceObs is not null)
@@ -219,7 +213,6 @@ internal sealed class DrawingBoard : Control
 
     private static double DistanceToSegment(PointF point, PointF a, PointF b)
     {
-        // 用点到线段的距离做命中测试，比只点标签更容易选中观测。
         var dx = b.X - a.X;
         var dy = b.Y - a.Y;
         if (Math.Abs(dx) < 1e-6 && Math.Abs(dy) < 1e-6)
@@ -325,7 +318,6 @@ internal sealed class DrawingBoard : Control
             var isPending = ReferenceEquals(point, _pendingPoint);
             var isSelected = ReferenceEquals(point, SelectedObject);
 
-            // 蓝色表示已知平面坐标点，绿色表示已知高程点，白色表示普通未知点。
             using var fill = new SolidBrush(point.IsCoordinateFixed
                 ? Color.FromArgb(36, 78, 160)
                 : point.IsHeightFixed
