@@ -88,6 +88,24 @@ ProjectDiagnostics.cs
 - 组合生成平差结果报告
 - 把平差结果写回点对象，并刷新界面
 
+配套代码文件：
+```text
+AdjustmentProject.cs
+DistanceModel.cs
+DrawingBoard.cs
+HeightModel.cs
+IAdjustmentModel.cs
+ILinearizable.cs
+LeastSquaresResult.cs
+LeastSquaresSolver.cs
+MatrixUtility.cs
+NonlinearLeastSquaresSolver.cs
+NonlinearResult.cs
+PrecisionEstimator.cs
+PrecisionResult.cs
+ProjectDiagnostics.cs
+```
+
 ### `FormMatrixCalculator.cs`
 
 误差方程计算器窗口。
@@ -100,6 +118,11 @@ ProjectDiagnostics.cs
 - 根据用户选择的自变量个数和观测值个数动态生成矩阵输入控件
 - 计算误差方程
 - 组合生成误差方程报告和解算结果报表
+
+配套代码文件：
+```text
+MatrixUtility.cs
+```
 
 ### `AdjustmentProject.cs`
 
