@@ -2,7 +2,7 @@ using System.Text;
 
 namespace AdjustEverything;
 
-public partial class Form1 : Form
+public partial class FormDrawingBoard : Form
 {
     private readonly AdjustmentProject _project = new();
     private readonly DrawingBoard _board;
@@ -12,7 +12,7 @@ public partial class Form1 : Form
     private readonly Label _statusLabel = new();
     private bool _syncingObjectList;
 
-    public Form1()
+    public FormDrawingBoard()
     {
         InitializeComponent();
 

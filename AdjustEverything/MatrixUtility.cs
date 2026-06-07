@@ -502,4 +502,128 @@ internal static class MatrixUtility
     }
 
     #endregion
+
+    #region 矩阵解析与格式化
+
+    /// <summary>
+    /// 从字符串解析矩阵
+    /// 格式：行内元素用逗号分隔，行之间用分号分隔
+    /// 示例："1,2,3;4,5,6" 表示 2×3 矩阵
+    /// </summary>
+    public static double[,] ParseMatrix(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return new double[0, 0];
+
+        string[] rows = text.Trim().Split(';');
+        int rowCount = rows.Length;
+        string[] firstRow = rows[0].Split(',');
+        int colCount = firstRow.Length;
+
+        double[,] result = new double[rowCount, colCount];
+
+        for (int i = 0; i < rowCount; i++)
+        {
+            string[] cols = rows[i].Split(',');
+
+            if (cols.Length != colCount)
+                throw new InvalidOperationException($"第{i + 1}行列数({cols.Length})与首行列数({colCount})不一致");
+
+            for (int j = 0; j < colCount; j++)
+                result[i, j] = double.Parse(cols[j].Trim());
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// 将矩阵格式化为字符串
+    /// 输出格式：行内元素逗号分隔，行之间分号分隔，每个元素占12位并保留6位小数
+    /// </summary>
+    public static string MatrixToString(double[,] matrix)
+    {
+        if (matrix == null || matrix.GetLength(0) == 0)
+            return "空矩阵";
+
+        int rows = matrix.GetLength(0);
+        int cols = matrix.GetLength(1);
+        var sb = new System.Text.StringBuilder();
+
+        for (int i = 0; i < rows; i++)
+        {
+            for (int j = 0; j < cols; j++)
+            {
+                sb.Append(matrix[i, j].ToString("F6").PadLeft(12));
+                if (j < cols - 1)
+                    sb.Append(", ");
+            }
+            if (i < rows - 1)
+                sb.Append(";\n");
+        }
+
+        return sb.ToString();
+    }
+
+    #endregion
+
+    #region 矩阵加法
+
+    /// <summary>
+    /// 矩阵加法
+    /// </summary>
+    public static double[,] AddMatrix(double[,] left, double[,] right)
+    {
+        int rows = left.GetLength(0);
+        int cols = left.GetLength(1);
+
+        if (rows != right.GetLength(0) || cols != right.GetLength(1))
+            throw new InvalidOperationException("矩阵加法维度不匹配");
+
+        var result = new double[rows, cols];
+
+        for (int i = 0; i < rows; i++)
+            for (int j = 0; j < cols; j++)
+                result[i, j] = left[i, j] + right[i, j];
+
+        return result;
+    }
+
+    #endregion
+
+    #region 列向量与数组互转（私有辅助）
+
+    private static double[] ColumnToArray(double[,] column)
+    {
+        int n = column.GetLength(0);
+        double[] result = new double[n];
+        for (int i = 0; i < n; i++)
+            result[i] = column[i, 0];
+        return result;
+    }
+
+    private static double[,] ArrayToColumn(double[] array)
+    {
+        int n = array.Length;
+        double[,] result = new double[n, 1];
+        for (int i = 0; i < n; i++)
+            result[i, 0] = array[i];
+        return result;
+    }
+
+    #endregion
+
+    #region 线性方程组求解（矩阵接口）
+
+    /// <summary>
+    /// 求解线性方程组 A * x = b
+    /// 其中 b 以矩阵（列向量）形式传入
+    /// </summary>
+    public static double[,] SolveLinear(double[,] A, double[,] b)
+    {
+        double[] bVec = ColumnToArray(b);
+        double[] xVec = Solve(A, bVec);
+        return ArrayToColumn(xVec);
+    }
+
+    #endregion
 }
