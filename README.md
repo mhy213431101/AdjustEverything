@@ -328,8 +328,8 @@ D = σ₀² · Q
   -> 用户点击检查或计算
   -> ProjectDiagnostics 检查模型
   -> Foam1 构造输入数据
-  -> ...Model 完成平差建模与线性化
-  -> NonlinearLeastSquaresSolver 执行最小二乘平差解算
+  -> ...Model 完成平差建模与线性化，并将数据写入接口 IAdjustmentModel 和 ILinearizable
+  -> NonlinearLeastSquaresSolver 通过接口调用模型数据执行最小二乘平差解算
   -> PrecisionEstimator 进行平差结果的精度评定
   -> Form1 把结果写回点对象
   -> DrawingBoard 和结果面板刷新
