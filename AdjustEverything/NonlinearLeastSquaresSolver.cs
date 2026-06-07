@@ -1,4 +1,8 @@
-﻿using AdjustEverything;
+﻿/// <summary>
+/// 最小二乘迭代（Gauss-Newton框架）
+/// 对所有平差模型进行统一求解，支持线性与非线性模型的统一处理
+/// </summary>
+using AdjustEverything;
 using System.Text;
 using static DistanceModel;
 
@@ -54,7 +58,7 @@ internal static class NonlinearLeastSquaresSolver
 
             if (max < Tol)
             {
-                report.AppendLine("收敛成功");
+                report.AppendLine($"收敛成功，迭代 {iter + 1} 次");
 
                 return new NonlinearResult
                 {

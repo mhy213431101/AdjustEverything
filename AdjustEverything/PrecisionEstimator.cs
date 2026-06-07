@@ -1,4 +1,8 @@
-﻿//最小二乘精度评定
+﻿/// <summary>
+/// 平差结果精度评定
+/// 计算单位权方差以及协方差阵等，生成精度评定报告
+/// </summary>
+//
 using System.Text;
 
 namespace AdjustEverything;
