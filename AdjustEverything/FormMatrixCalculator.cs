@@ -10,6 +10,7 @@ namespace MeasurementAdjustment
         {
             InitializeComponent();
             BindEventHandlers();
+            SetDefaultParamConditionData();
         }
 
         private void BindEventHandlers()
@@ -125,91 +126,95 @@ namespace MeasurementAdjustment
         }
 
         // ==================== 附有参数的条件平差计算 ====================
-        private void BtnParamConditionCalc_Click(object sender, EventArgs e)
+        private void BtnParamConditionCalc_Click(object? sender, EventArgs e)
         {
-            try
-            {
-                double[,] A = MatrixUtility.ParseMatrix(txtParamConditionA.Text);
-                double[,] B = MatrixUtility.ParseMatrix(txtParamConditionB.Text);
-                double[,] W_const = MatrixUtility.ParseMatrix(txtParamConditionW.Text);
-                double[,] L = MatrixUtility.ParseMatrix(txtParamConditionL.Text);
-                double[,] P = string.IsNullOrWhiteSpace(txtParamConditionP.Text)
-                    ? MatrixUtility.Identity(L.GetLength(0))
-                    : MatrixUtility.ParseMatrix(txtParamConditionP.Text);
-
-                int n = L.GetLength(0);
-                int r = A.GetLength(0);
-                int u = B.GetLength(1);
-                ValidateParamConditionInput(A, B, n, r);
-
-                double[,] Q = MatrixUtility.Inverse(P);
-                double[,] AQ = MatrixUtility.Multiply(A, Q);
-                double[,] Nbb = MatrixUtility.Multiply(AQ, MatrixUtility.Transpose(A));
-                double[,] Nbx = MatrixUtility.Multiply(AQ, MatrixUtility.Transpose(B));
-                double[,] Nxb = MatrixUtility.Transpose(Nbx);
-
-                int total = r + u;
-                double[,] M = BuildParamConditionMatrix(Nbb, Nbx, Nxb, r, u);
-                double[,] RHS = BuildParamConditionRHS(W_const, r, u);
-                double[,] sol = MatrixUtility.SolveLinear(M, RHS);
-
-                double[,] K = ExtractSubMatrix(sol, 0, r);
-                double[,] x = ExtractSubMatrix(sol, r, u);
-
-                double[,] V = MatrixUtility.AddMatrix(
-                    MatrixUtility.Multiply(MatrixUtility.Multiply(Q, MatrixUtility.Transpose(A)), K),
-                    MatrixUtility.Multiply(MatrixUtility.Multiply(Q, MatrixUtility.Transpose(B)), x));
-                double[,] L_hat = MatrixUtility.AddMatrix(L, V);
-
-                txtParamConditionResult.Text = FormatParamConditionResult(W_const, M, K, x, V, L_hat);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("计算错误: " + ex.Message);
-            }
-        }
-
-        private void ValidateParamConditionInput(double[,] A, double[,] B, int n, int r)
+        try
         {
-            if (A.GetLength(1) != n) throw new Exception("A列数应为n");
-            if (B.GetLength(0) != r) throw new Exception("B行数应与A行数相同");
-        }
+        // 读取输入
+        double[,] A = MatrixUtility.ParseMatrix(txtParamConditionA.Text);   // r×n
+        double[,] B = MatrixUtility.ParseMatrix(txtParamConditionB.Text);   // r×u
+        double[,] W = MatrixUtility.ParseMatrix(txtParamConditionW.Text);   // r×1
+        double[,] L = MatrixUtility.ParseMatrix(txtParamConditionL.Text);   // n×1
+        double[,] P = string.IsNullOrWhiteSpace(txtParamConditionP.Text)
+            ? MatrixUtility.Identity(L.GetLength(0))
+            : MatrixUtility.ParseMatrix(txtParamConditionP.Text);           // n×n
 
-        private double[,] BuildParamConditionMatrix(double[,] Nbb, double[,] Nbx, double[,] Nxb, int r, int u)
+        int n = L.GetLength(0);   // 观测值个数
+        int r = A.GetLength(0);   // 条件方程个数
+        int u = B.GetLength(1);   // 参数个数
+
+        // 输入合法性检查
+        if (A.GetLength(1) != n) throw new Exception("A的列数必须等于观测值个数 n");
+        if (B.GetLength(0) != r) throw new Exception("B的行数必须等于条件方程个数 r");
+        if (W.GetLength(0) != r || W.GetLength(1) != 1) throw new Exception("W必须是 r×1 列向量");
+        if (L.GetLength(1) != 1) throw new Exception("L必须是 n×1 列向量");
+        if (P.GetLength(0) != n || P.GetLength(1) != n) throw new Exception("P必须是 n×n 方阵");
+
+        // 权逆阵 Q = P⁻¹
+        double[,] Q = MatrixUtility.Inverse(P);
+
+        // 计算 Nbb = A Q Aᵀ
+        double[,] AQ = MatrixUtility.Multiply(A, Q);
+        double[,] Nbb = MatrixUtility.Multiply(AQ, MatrixUtility.Transpose(A));  // r×r
+
+        // 构建法方程系数矩阵 M = [Nbb, B; Bᵀ, 0]
+        double[,] M = new double[r + u, r + u];
+        for (int i = 0; i < r; i++)
+            for (int j = 0; j < r; j++)
+                M[i, j] = Nbb[i, j];
+        for (int i = 0; i < r; i++)
+            for (int j = 0; j < u; j++)
+                M[i, r + j] = B[i, j];
+        for (int i = 0; i < u; i++)
+            for (int j = 0; j < r; j++)
+                M[r + i, j] = B[j, i];
+
+        // 构建右端项 RHS = [-W; 0]
+        double[,] RHS = new double[r + u, 1];
+        for (int i = 0; i < r; i++)
+            RHS[i, 0] = -W[i, 0];
+
+        // 解算 [K; x]
+        double[,] sol = MatrixUtility.SolveLinear(M, RHS);
+        double[,] K = ExtractSubMatrix(sol, 0, r);      // r×1
+        double[,] x = ExtractSubMatrix(sol, r, u);      // u×1
+
+        // 计算改正数 V = -Q * Aᵀ * K
+        double[,] AT = MatrixUtility.Transpose(A);      // n×r
+        double[,] ATK = MatrixUtility.Multiply(AT, K);  // n×1
+        double[,] Q_ATK = MatrixUtility.Multiply(Q, ATK); // n×1
+        double[,] V = MatrixUtility.MultiplyScalar(Q_ATK, -1.0);
+
+        // 平差值 L̂ = L + V
+        double[,] L_hat = MatrixUtility.AddMatrix(L, V);
+
+        // 
+        txtParamConditionResult.Text = FormatParamConditionResult(W, M, K, x, V, L_hat);
+        }
+        catch (Exception ex)
         {
-            int total = r + u;
-            double[,] M = new double[total, total];
-            for (int i = 0; i < r; i++)
-                for (int j = 0; j < r; j++)
-                    M[i, j] = Nbb[i, j];
-            for (int i = 0; i < r; i++)
-                for (int j = 0; j < u; j++)
-                    M[i, r + j] = Nbx[i, j];
-            for (int i = 0; i < u; i++)
-                for (int j = 0; j < r; j++)
-                    M[r + i, j] = Nxb[i, j];
-            return M;
+        MessageBox.Show("计算错误: " + ex.Message);
         }
-
-        private double[,] BuildParamConditionRHS(double[,] W_const, int r, int u)
-        {
-            double[,] RHS = new double[r + u, 1];
-            for (int i = 0; i < r; i++)
-                RHS[i, 0] = -W_const[i, 0];
-            return RHS;
         }
-
         private string FormatParamConditionResult(double[,] W, double[,] M, double[,] K, double[,] x, double[,] V, double[,] L_hat)
         {
-            return "=== 附有参数的条件平差中间量 ===\r\n"
-                + "W (闭合差):\r\n" + MatrixUtility.MatrixToString(W) + "\r\n\r\n"
-                + "N (法方程系数矩阵):\r\n" + MatrixUtility.MatrixToString(M) + "\r\n\r\n"
-                + "K (联系数):\r\n" + MatrixUtility.MatrixToString(K) + "\r\n"
-                + "x (参数改正数):\r\n" + MatrixUtility.MatrixToString(x) + "\r\n\r\n"
-                + "V (观测值改正数):\r\n" + MatrixUtility.MatrixToString(V) + "\r\n\r\n"
-                + "平差值 L̂:\r\n" + MatrixUtility.MatrixToString(L_hat);
+        return "=== 附有参数的条件平差结果 ===\r\n"
+        + "W (闭合差):\r\n" + MatrixUtility.MatrixToString(W) + "\r\n\r\n"
+        + "法方程系数矩阵:\r\n" + MatrixUtility.MatrixToString(M) + "\r\n\r\n"
+        + "K (联系数):\r\n" + MatrixUtility.MatrixToString(K) + "\r\n"
+        + "x (参数改正数):\r\n" + MatrixUtility.MatrixToString(x) + "\r\n\r\n"
+        + "V (观测值改正数):\r\n" + MatrixUtility.MatrixToString(V) + "\r\n\r\n"
+        + "平差值 L̂:\r\n" + MatrixUtility.MatrixToString(L_hat);
         }
-
+        private void SetDefaultParamConditionData()
+        {
+        // 确保控件存在（名称与设计器中的一致）
+        txtParamConditionA.Text = "1,-1";
+        txtParamConditionB.Text = "1";
+        txtParamConditionW.Text = "0";
+        txtParamConditionL.Text = "0.001;0.002";
+        txtParamConditionP.Text = "";   // 留空表示使用单位权
+        }
         // ==================== 附有限制条件的间接平差计算 ====================
         private void BtnConstrainedIndirectCalc_Click(object sender, EventArgs e)
         {
