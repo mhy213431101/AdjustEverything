@@ -1,5 +1,6 @@
 ﻿/// <summary>
-/// 间接平差线性化接口
+/// 接口
+/// 间接平差线性化误差方程
 /// </summary>
 internal interface ILinearizable
 {

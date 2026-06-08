@@ -1,5 +1,6 @@
 ﻿///<summary>
-///间接平差输入数据接口
+///接口
+///间接平差输入数据
 /// </summary>
 namespace AdjustEverything;
 

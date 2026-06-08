@@ -1,4 +1,8 @@
-﻿namespace AdjustEverything;
+﻿/// <summary>
+/// 结果对象
+/// 精度评定结果
+/// </summary>
+namespace AdjustEverything;
 
 internal sealed class PrecisionResult
 {

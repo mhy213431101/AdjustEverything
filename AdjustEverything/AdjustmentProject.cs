@@ -144,6 +144,12 @@ internal sealed class AdjustmentProject
     }
 }
 
+public enum DisplayMode
+{
+    Height,
+    Coordinate
+}
+
 internal sealed class SurveyPoint
 {
     public required Guid Id { get; init; }
@@ -155,19 +161,23 @@ internal sealed class SurveyPoint
     public double? X { get; set; }
     public double? Y { get; set; }
 
+
+    public DisplayMode CurrentDisplayMode { get; set; }
+
     public override string ToString()
     {
-        if (IsCoordinateFixed)
-        {
-            return $"点 {Name}  已知XY=({X:F3},{Y:F3}) m";
-        }
-
-        if (IsHeightFixed)
+        if ((CurrentDisplayMode == DisplayMode.Height) && IsHeightFixed)
         {
             return $"点 {Name}  已知H={Height:F3} m";
         }
-
-        return $"点 {Name}";
+        else if ((CurrentDisplayMode == DisplayMode.Coordinate) && IsCoordinateFixed)
+        {
+            return $"点 {Name}  已知XY=({X:F3},{Y:F3}) m";
+        }
+        else
+        {
+            return $"点 {Name}";
+        }
     }
 }
 

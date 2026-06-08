@@ -1,4 +1,6 @@
-﻿//矩阵计算工具
+﻿/// <summary>
+/// 矩阵计算工具
+/// </summary>
 namespace AdjustEverything;
 
 internal static class MatrixUtility

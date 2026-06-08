@@ -1,4 +1,5 @@
 ﻿/// <summary>
+/// 结果对象
 /// 非线性网平差结果
 /// </summary>
 using AdjustEverything;

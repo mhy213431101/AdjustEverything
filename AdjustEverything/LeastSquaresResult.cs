@@ -1,4 +1,8 @@
-﻿namespace AdjustEverything;
+﻿/// <summary>
+/// 结果对象
+/// 单次最小二乘运算结果
+/// </summary>
+namespace AdjustEverything;
 
 internal sealed class LeastSquaresResult
 {

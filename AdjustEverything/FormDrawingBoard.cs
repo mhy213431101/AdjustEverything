@@ -760,8 +760,31 @@ public partial class FormDrawingBoard : Form
         //4. 精度评定
         var precision = PrecisionEstimator.Estimate(result.LS);
 
+        //5. 报告生成
         var sb = new StringBuilder();
-        sb.AppendLine("高程网平差结果");
+
+        sb.AppendLine(validation.ToReport("高程网平差结果"));
+
+        sb.AppendLine("已知点信息：");
+        foreach (var point in fixedPoints)
+        {
+            point.CurrentDisplayMode = DisplayMode.Height;
+            sb.AppendLine(point.ToString());
+        }
+        sb.AppendLine();
+
+        sb.AppendLine("未知点信息：");
+        foreach (var point in unknownPoints)
+        {
+            sb.AppendLine(point.ToString());
+        }
+        sb.AppendLine();
+
+        sb.AppendLine("观测信息：");
+        foreach (var point in observations)
+        {
+            sb.AppendLine(point.ToString());
+        }
         sb.AppendLine();
 
         sb.AppendLine($"观测数 n = {observations.Count}");
@@ -769,22 +792,22 @@ public partial class FormDrawingBoard : Form
         sb.AppendLine($"多余观测 r = {observations.Count - unknownPoints.Count}");
 
         sb.AppendLine();
-        sb.AppendLine("未知点高程：");
+        sb.AppendLine("未知点高程 H(m)：");
         for (int i = 0; i < unknownPoints.Count; i++)
         {
             sb.AppendLine(
                 $"{unknownPoints[i].Name,-4}  " +
-                $"H={result.XHat[i]:F4} m");
+                $"{result.XHat[i]:F4}");
         }
 
         sb.AppendLine();
-        sb.AppendLine("观测改正数");
+        sb.AppendLine("观测改正数 v(mm)：");
 
         for (int i = 0; i < result.LS.V.Length; i++)
         {
             sb.AppendLine(
                 $"{observations[i].Name,-4}  " +
-                $"v={1000 * result.LS.V[i]:F1} mm");
+                $"{1000 * result.LS.V[i]:F1}");
         }
 
         sb.AppendLine(precision.Report);
@@ -868,10 +891,32 @@ public partial class FormDrawingBoard : Form
         var result = NonlinearLeastSquaresSolver.Solve(model, model);
 
         var precision = PrecisionEstimator.Estimate(result.LS);
-
+        
         var sb = new StringBuilder();
 
         sb.AppendLine(validation.ToReport("测边网平差结果"));
+
+        sb.AppendLine("已知点信息：");
+        foreach (var point in fixedPoints)
+        {
+            point.CurrentDisplayMode = DisplayMode.Coordinate;
+            sb.AppendLine(point.ToString());
+        }
+        sb.AppendLine();
+
+        sb.AppendLine("未知点信息：");
+        foreach (var point in unknownPoints)
+        {
+            sb.AppendLine(point.ToString());
+        }
+        sb.AppendLine();
+
+        sb.AppendLine("观测信息：");
+        foreach (var point in observations)
+        {
+            sb.AppendLine(point.ToString());
+        }
+        sb.AppendLine();
 
         sb.AppendLine($"观测数 n = {observations.Count}");
         sb.AppendLine($"未知数 t = {unknownPoints.Count}");
@@ -880,7 +925,7 @@ public partial class FormDrawingBoard : Form
 
         sb.AppendLine(result.Report);
 
-        sb.AppendLine("未知点坐标：");
+        sb.AppendLine("未知点坐标(m)：");
 
         for (int i = 0; i < unknownPoints.Count; i++)
         {
@@ -901,7 +946,7 @@ public partial class FormDrawingBoard : Form
         {
             sb.AppendLine(
                 $"{observations[i].Name,-6} " +
-                $"v={v[i] * 1000:F1}");
+                $"{v[i] * 1000:F1}");
         }
 
         sb.AppendLine(precision.Report);
