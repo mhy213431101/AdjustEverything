@@ -189,7 +189,7 @@ public partial class FormDrawingBoard : Form
         AddToolButton(panel, "○ 添加点", ToolMode.AddPoint);
         AddToolButton(panel, "─ 添加线", ToolMode.AddLine);
         AddToolButton(panel, "(x,y) 添加坐标", ToolMode.FixedCoordinate);
-        AddToolButton(panel, "∠α 添加角", ToolMode.Select);
+        AddToolButton(panel, "∠α 添加角", ToolMode.AddAngle);
         AddToolButton(panel, "↔ 添加距离", ToolMode.AddDistance);
         AddToolButton(panel, "↕ 添加高程", ToolMode.AddHeight);
 
@@ -288,6 +288,7 @@ public partial class FormDrawingBoard : Form
             ToolMode.AddLine => "添加线：依次单击两个点，创建普通连线。",
             ToolMode.AddHeight => "添加高程：依次单击两个点，创建高差观测；数值在属性面板填写。",
             ToolMode.AddDistance => "添加距离：依次单击两个点，创建距离观测；数值在属性面板填写。",
+            ToolMode.AddAngle => "添加角度：依次点击后视点A、测站点B、前视点C。",
             ToolMode.FixedHeight => "已知高程：单击点设为已知高程点；高程在属性面板修改。",
             ToolMode.FixedCoordinate => "已知坐标：单击点设为已知平面点；X/Y 在属性面板修改。",
             _ => "选择模式：单击点或观测查看属性。"
@@ -369,7 +370,10 @@ public partial class FormDrawingBoard : Form
         {
             _objectList.Items.Add(new ObjectListItem(obs));
         }
-
+        foreach (var obs in _project.AngleObservations)
+        {
+            _objectList.Items.Add(new ObjectListItem(obs));
+        }
         _syncingObjectList = false;
         SyncObjectListSelection(selected);
         _board.Invalidate();
@@ -407,6 +411,9 @@ public partial class FormDrawingBoard : Form
             case DistanceObservation observation:
                 BuildDistanceObservationProperties(observation);
                 break;
+            case AngleObservation observation:
+                BuildAngleObservationProperties(observation);
+                break;
             default:
                 _propertyPanel.Controls.Add(new Label
                 {
@@ -417,7 +424,78 @@ public partial class FormDrawingBoard : Form
                 break;
         }
     }
+    private void BuildAngleObservationProperties(
+    AngleObservation observation)
+    {
+        var table = BuildPropertyTable();
 
+        var nameBox =
+            AddTextRow(
+                table,
+                "观测名",
+                observation.Name);
+
+        AddReadonlyRow(
+            table,
+            "后视点",
+            observation.From.Name);
+
+        AddReadonlyRow(
+            table,
+            "测站点",
+            observation.Vertex.Name);
+
+        AddReadonlyRow(
+            table,
+            "前视点",
+            observation.To.Name);
+
+        var valueBox =
+            AddTextRow(
+                table,
+                "角度值(°)",
+                observation.Value.ToString("F4"));
+
+        var sigmaBox =
+            AddTextRow(
+                table,
+                "中误差σ",
+                observation.Sigma.ToString("F4"));
+
+        var apply = AddApplyButton(table);
+
+        var delete = AddDeleteButton(table);
+
+        apply.Click += (_, _) =>
+        {
+            if (!ReadObservationDistance(
+                    nameBox,
+                    valueBox,
+                    sigmaBox,
+                    "角度值(°)",
+                    out var name,
+                    out var value,
+                    out var sigma))
+            {
+                return;
+            }
+
+            observation.Name = name;
+            observation.Sigma = sigma;
+
+            RefreshProjectViews();
+
+            _board.SelectObject(observation);
+
+            _statusLabel.Text =
+                $"角度观测 {observation.Name} 已更新";
+        };
+
+        delete.Click += (_, _) =>
+            DeleteSelectedObject();
+
+        _propertyPanel.Controls.Add(table);
+    }
     private void BuildPointProperties(SurveyPoint point)
     {
         var table = BuildPropertyTable();
@@ -891,7 +969,7 @@ public partial class FormDrawingBoard : Form
         var result = NonlinearLeastSquaresSolver.Solve(model, model);
 
         var precision = PrecisionEstimator.Estimate(result.LS);
-        
+
         var sb = new StringBuilder();
 
         sb.AppendLine(validation.ToReport("测边网平差结果"));
@@ -1008,12 +1086,21 @@ public partial class FormDrawingBoard : Form
 
         var name = selected switch
         {
-            SurveyPoint point => $"点 {point.Name}",
-            HeightObservation observation => $"高差观测 {observation.Name}",
-            DistanceObservation observation => $"距离观测 {observation.Name}",
-            _ => "所选对象",
-        };
+            SurveyPoint point =>
+                $"点 {point.Name}",
 
+            HeightObservation observation =>
+                $"高差观测 {observation.Name}",
+
+            DistanceObservation observation =>
+                $"距离观测 {observation.Name}",
+
+            AngleObservation observation =>
+                $"角度观测 {observation.Name}",
+
+            _ =>
+                "所选对象",
+        };
         var confirm = MessageBox.Show(
             $"确定删除 {name} 吗？\r\n\r\n如果删除点，与该点相连的观测和连线也会被删除。",
             "删除对象",
@@ -1049,6 +1136,7 @@ internal enum ToolMode
     AddLine,
     AddHeight,
     AddDistance,
+    AddAngle,
     FixedHeight,
     FixedCoordinate,
 }

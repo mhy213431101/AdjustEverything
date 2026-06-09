@@ -7,10 +7,11 @@ internal sealed class AdjustmentProject
     private int _pointSerial = 1;
     private int _heightSerial = 1;
     private int _distanceSerial = 1;
-
+    private int _angleSerial = 1;
     public List<SurveyPoint> Points { get; } = [];
     public List<HeightObservation> HeightObservations { get; } = [];
     public List<DistanceObservation> DistanceObservations { get; } = [];
+    public List<AngleObservation> AngleObservations { get; } = [];
     public List<BoardLine> Lines { get; } = [];
 
     public SurveyPoint AddPoint(string? name, PointF canvasLocation)
@@ -70,11 +71,38 @@ internal sealed class AdjustmentProject
         DistanceObservations.Add(observation);
         return observation;
     }
+    public AngleObservation AddAngleObservation(
+    SurveyPoint from,
+    SurveyPoint vertex,
+    SurveyPoint to)
+    {
+        AddLine(from, vertex);
+        AddLine(vertex, to);
 
+        var observation =
+            new AngleObservation
+            {
+                Name = $"a{_angleSerial++}",
+
+                From = from,
+
+                Vertex = vertex,
+
+                To = to,
+
+
+                Sigma = 1.0
+            };
+
+        AngleObservations.Add(observation);
+
+        return observation;
+    }
     public void RemovePoint(SurveyPoint point)
     {
         HeightObservations.RemoveAll(obs => ReferenceEquals(obs.From, point) || ReferenceEquals(obs.To, point));
         DistanceObservations.RemoveAll(obs => ReferenceEquals(obs.From, point) || ReferenceEquals(obs.To, point));
+        AngleObservations.RemoveAll(obs => ReferenceEquals(obs.From, point) || ReferenceEquals(obs.Vertex, point) || ReferenceEquals(obs.To, point));
         Lines.RemoveAll(line => ReferenceEquals(line.From, point) || ReferenceEquals(line.To, point));
         Points.Remove(point);
     }
@@ -90,7 +118,11 @@ internal sealed class AdjustmentProject
         DistanceObservations.Remove(observation);
         RemoveLineIfUnused(observation.From, observation.To);
     }
-
+    public void RemoveAngleObservation(
+    AngleObservation observation)
+    {
+        AngleObservations.Remove(observation);
+    }
     public void RemoveObject(object? value)
     {
         switch (value)
@@ -104,6 +136,9 @@ internal sealed class AdjustmentProject
             case DistanceObservation observation:
                 RemoveDistanceObservation(observation);
                 break;
+            case AngleObservation observation:
+                RemoveAngleObservation(observation);
+                break;
         }
     }
 
@@ -113,9 +148,11 @@ internal sealed class AdjustmentProject
         Lines.Clear();
         HeightObservations.Clear();
         DistanceObservations.Clear();
+        AngleObservations.Clear();
         _pointSerial = 1;
         _heightSerial = 1;
         _distanceSerial = 1;
+        _angleSerial = 1;
     }
 
     private void RemoveLineIfUnused(SurveyPoint from, SurveyPoint to)
@@ -168,15 +205,15 @@ internal sealed class SurveyPoint
     {
         if ((CurrentDisplayMode == DisplayMode.Height) && IsHeightFixed)
         {
-            return $"点 {Name}  已知H={Height:F3} m";
+            return $"鐐? {Name}  宸茬煡H={Height:F3} m";
         }
         else if ((CurrentDisplayMode == DisplayMode.Coordinate) && IsCoordinateFixed)
         {
-            return $"点 {Name}  已知XY=({X:F3},{Y:F3}) m";
+            return $"鐐? {Name}  宸茬煡XY=({X:F3},{Y:F3}) m";
         }
         else
         {
-            return $"点 {Name}";
+            return $"鐐? {Name}";
         }
     }
 }
@@ -204,7 +241,7 @@ internal sealed class HeightObservation
 
     public override string ToString()
     {
-        return $"{Name}: {From.Name}->{To.Name}  Δh={Value:F3} m";
+        return $"{Name}: {From.Name}->{To.Name}  螖h={Value:F3} m";
     }
 }
 

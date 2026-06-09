@@ -7,6 +7,8 @@ internal sealed class DrawingBoard : Control
     private const float PointRadius = 9F;
     private readonly AdjustmentProject _project;
     private SurveyPoint? _pendingPoint;
+    private SurveyPoint? _angleFrom;
+    private SurveyPoint? _angleVertex;
     private SurveyPoint? _draggingPoint;
     private PointF _dragOffset;
 
@@ -124,6 +126,9 @@ internal sealed class DrawingBoard : Control
             case ToolMode.AddDistance:
                 ConnectPoint(point, ObservationCreation.Distance);
                 break;
+            case ToolMode.AddAngle:
+                CreateAngle(point);
+                break;
             case ToolMode.FixedHeight:
                 SelectObject(point);
                 point.IsHeightFixed = true;
@@ -147,7 +152,48 @@ internal sealed class DrawingBoard : Control
                 break;
         }
     }
+    private void CreateAngle(SurveyPoint point)
+    {
+        if (_angleFrom is null)
+        {
+            _angleFrom = point;
 
+            StatusChanged?.Invoke(
+                this,
+                $"已选择后视点 {point.Name}");
+
+            return;
+        }
+
+        if (_angleVertex is null)
+        {
+            _angleVertex = point;
+
+            StatusChanged?.Invoke(
+                this,
+                $"已选择测站点 {point.Name}");
+
+            return;
+        }
+
+        var angle = _project.AddAngleObservation(
+           _angleFrom,
+    _angleVertex,
+    point);
+
+        _angleFrom = null;
+        _angleVertex = null;
+
+        SelectObject(angle);
+
+        ProjectChanged?.Invoke(
+            this,
+            EventArgs.Empty);
+
+        StatusChanged?.Invoke(
+            this,
+            $"已创建角度 {angle.Name}");
+    }
     private void ConnectPoint(SurveyPoint point, ObservationCreation creation)
     {
         if (_pendingPoint is null)
@@ -232,7 +278,11 @@ internal sealed class DrawingBoard : Control
         return value switch
         {
             HeightObservation observation => observation.Name,
+
             DistanceObservation observation => observation.Name,
+
+            AngleObservation observation => observation.Name,
+
             _ => "",
         };
     }
@@ -273,8 +323,21 @@ internal sealed class DrawingBoard : Control
     {
         return SelectedObject switch
         {
-            HeightObservation obs => ReferenceEquals(obs.From, line.From) && ReferenceEquals(obs.To, line.To),
-            DistanceObservation obs => ReferenceEquals(obs.From, line.From) && ReferenceEquals(obs.To, line.To),
+            HeightObservation obs =>
+                ReferenceEquals(obs.From, line.From)
+                && ReferenceEquals(obs.To, line.To),
+
+            DistanceObservation obs =>
+                ReferenceEquals(obs.From, line.From)
+                && ReferenceEquals(obs.To, line.To),
+
+            AngleObservation obs =>
+                (ReferenceEquals(obs.From, line.From)
+                 && ReferenceEquals(obs.Vertex, line.To))
+                ||
+                (ReferenceEquals(obs.Vertex, line.From)
+                 && ReferenceEquals(obs.To, line.To)),
+
             _ => false,
         };
     }
