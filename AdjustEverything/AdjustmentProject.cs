@@ -259,6 +259,7 @@ internal sealed class DistanceObservation
     }
 }
 
+
 /// <summary>
 /// 角度观测
 /// ∠ABC
@@ -266,6 +267,8 @@ internal sealed class DistanceObservation
 /// </summary>
 internal sealed class AngleObservation
 {
+    private bool _isManual = false;
+    private double _manualValue;
     /// <summary>
     /// 观测名称
     /// </summary>
@@ -293,6 +296,9 @@ internal sealed class AngleObservation
     {
         get
         {
+            if (_isManual)
+                return _manualValue;
+
             var bax = From.CanvasLocation.X - Vertex.CanvasLocation.X;
             var bay = From.CanvasLocation.Y - Vertex.CanvasLocation.Y;
 
@@ -336,8 +342,15 @@ internal sealed class AngleObservation
     public double ValueRad =>
         Value * Math.PI / 180.0;
 
+    public void SetManualValue(double value)
+    {
+        _manualValue = value;
+        _isManual = true;
+    }
+
     public override string ToString()
     {
         return $"角度 {Name} = {Value:F6}°";
     }
+
 }
