@@ -2,7 +2,7 @@ using System.Text;
 
 namespace AdjustEverything;
 
-internal sealed class HeightModel :
+internal sealed class LevelHeightModel :
     IAdjustmentModel,
     ILinearizable
 {
@@ -20,7 +20,7 @@ internal sealed class HeightModel :
 
     public double[] X0 { get; }
 
-    public HeightModel(
+    public LevelHeightModel(
         List<SurveyPoint> unknownPoints,
         List<HeightObservation> observations,
         Dictionary<SurveyPoint, int> index,

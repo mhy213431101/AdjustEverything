@@ -146,17 +146,17 @@ public partial class FormDrawingBoard : Form
         };
         var distanceCalculate = new Button
         {
-            Text = "▷ 测边计算",
+            Text = "▷ 测边网计算",
             Dock = DockStyle.Right,
-            Width = 150,
+            Width = 160,
             FlatStyle = FlatStyle.Flat,
         };
         distanceCalculate.Click += (_, _) => RunDistanceAdjustment();
         var heightCalculate = new Button
         {
-            Text = "▷ 高程计算",
+            Text = "▷ 水准网计算",
             Dock = DockStyle.Right,
-            Width = 150,
+            Width = 160,
             FlatStyle = FlatStyle.Flat,
         };
         heightCalculate.Click += (_, _) => RunHeightAdjustment();
@@ -189,7 +189,7 @@ public partial class FormDrawingBoard : Form
         AddToolButton(panel, "○ 添加点", ToolMode.AddPoint);
         AddToolButton(panel, "─ 添加线", ToolMode.AddLine);
         AddToolButton(panel, "(x,y) 添加坐标", ToolMode.FixedCoordinate);
-        AddToolButton(panel, "∠α 添加角", ToolMode.AddAngle);
+        AddToolButton(panel, "∠α 添加角度", ToolMode.AddAngle);
         AddToolButton(panel, "↔ 添加距离", ToolMode.AddDistance);
         AddToolButton(panel, "↕ 添加高程", ToolMode.AddHeight);
 
@@ -201,7 +201,7 @@ public partial class FormDrawingBoard : Form
         };
         panel.Controls.Add(sample);
 
-        var heightCheck = BuildSideButton("检查高程网");
+        var heightCheck = BuildSideButton("检查水准网");
         heightCheck.Click += (_, _) => RunHeightNetworkCheck();
         panel.Controls.Add(heightCheck);
 
@@ -798,8 +798,8 @@ public partial class FormDrawingBoard : Form
 
         if (validation.HasErrors)
         {
-            _resultBox.Text = validation.ToReport("高程网检查");
-            _statusLabel.Text = "高程网检查未通过，请根据结果面板中的错误修改模型。";
+            _resultBox.Text = validation.ToReport("水准网检查");
+            _statusLabel.Text = "水准网检查未通过，请根据结果面板中的错误修改模型。";
             return;
         }
 
@@ -826,7 +826,7 @@ public partial class FormDrawingBoard : Form
         }
 
         //2. 导入模型
-        var model = new HeightModel(
+        var model = new LevelHeightModel(
             unknownPoints,
             observations,
             index,
@@ -841,7 +841,7 @@ public partial class FormDrawingBoard : Form
         //5. 报告生成
         var sb = new StringBuilder();
 
-        sb.AppendLine(validation.ToReport("高程网平差结果"));
+        sb.AppendLine(validation.ToReport("水准网平差结果"));
 
         sb.AppendLine("已知点信息：");
         foreach (var point in fixedPoints)
@@ -870,7 +870,7 @@ public partial class FormDrawingBoard : Form
         sb.AppendLine($"多余观测 r = {observations.Count - unknownPoints.Count}");
 
         sb.AppendLine();
-        sb.AppendLine("未知点高程 H(m)：");
+        sb.AppendLine("未知点水准 H(m)：");
         for (int i = 0; i < unknownPoints.Count; i++)
         {
             sb.AppendLine(
@@ -1060,10 +1060,10 @@ public partial class FormDrawingBoard : Form
     private void RunHeightNetworkCheck()
     {
         var validation = ProjectDiagnostics.ValidateHeightNetwork(_project);
-        _resultBox.Text = validation.ToReport("高程网检查");
+        _resultBox.Text = validation.ToReport("水准网检查");
         _statusLabel.Text = validation.HasErrors
-            ? "高程网检查未通过，请先修正错误。"
-            : "高程网检查通过，可以开始计算。";
+            ? "水准网检查未通过，请先修正错误。"
+            : "水准网检查通过，可以开始计算。";
     }
 
     private void RunDistanceNetworkCheck()

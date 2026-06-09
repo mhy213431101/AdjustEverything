@@ -205,15 +205,15 @@ internal sealed class SurveyPoint
     {
         if ((CurrentDisplayMode == DisplayMode.Height) && IsHeightFixed)
         {
-            return $"鐐? {Name}  宸茬煡H={Height:F3} m";
+            return $"点 {Name}  已知H={Height:F3} m";
         }
         else if ((CurrentDisplayMode == DisplayMode.Coordinate) && IsCoordinateFixed)
         {
-            return $"鐐? {Name}  宸茬煡XY=({X:F3},{Y:F3}) m";
+            return $"点 {Name}  已知XY=({X:F3},{Y:F3}) m";
         }
         else
         {
-            return $"鐐? {Name}";
+            return $"点 {Name}";
         }
     }
 }
@@ -241,7 +241,7 @@ internal sealed class HeightObservation
 
     public override string ToString()
     {
-        return $"{Name}: {From.Name}->{To.Name}  螖h={Value:F3} m";
+        return $"{Name}: {From.Name}->{To.Name}  Δh={Value:F3} m";
     }
 }
 
@@ -256,5 +256,88 @@ internal sealed class DistanceObservation
     public override string ToString()
     {
         return $"{Name}: {From.Name}-{To.Name}  S={Value:F3} m";
+    }
+}
+
+/// <summary>
+/// 角度观测
+/// ∠ABC
+/// B为测站点(Vertex)
+/// </summary>
+internal sealed class AngleObservation
+{
+    /// <summary>
+    /// 观测名称
+    /// </summary>
+    public required string Name { get; set; }
+
+    /// <summary>
+    /// 后视点A
+    /// </summary>
+    public required SurveyPoint From { get; init; }
+
+    /// <summary>
+    /// 测站点B
+    /// </summary>
+    public required SurveyPoint Vertex { get; init; }
+
+    /// <summary>
+    /// 前视点C
+    /// </summary>
+    public required SurveyPoint To { get; init; }
+
+    /// <summary>
+    /// 角度值(度)
+    /// </summary>
+    public double Value
+    {
+        get
+        {
+            var bax = From.CanvasLocation.X - Vertex.CanvasLocation.X;
+            var bay = From.CanvasLocation.Y - Vertex.CanvasLocation.Y;
+
+            var bcx = To.CanvasLocation.X - Vertex.CanvasLocation.X;
+            var bcy = To.CanvasLocation.Y - Vertex.CanvasLocation.Y;
+
+            var dot = bax * bcx + bay * bcy;
+
+            var len1 = Math.Sqrt(
+                bax * bax +
+                bay * bay);
+
+            var len2 = Math.Sqrt(
+                bcx * bcx +
+                bcy * bcy);
+
+            if (len1 < 1e-6 || len2 < 1e-6)
+                return 0.0;
+
+            var cos =
+                dot /
+                (len1 * len2);
+
+            cos = Math.Max(
+                -1.0,
+                Math.Min(
+                    1.0,
+                    cos));
+
+            return
+                Math.Acos(cos)
+                * 180.0
+                / Math.PI;
+        }
+    }
+    public double Sigma { get; set; }
+
+    /// <summary>
+    /// 弧度值
+    /// </summary>
+    public double ValueRad =>
+        Value * Math.PI / 180.0;
+
+    public override string ToString()
+    {
+        return $"角度 {Name} = {Value:F6}°";
     }
 }

@@ -71,7 +71,7 @@ internal static class ProjectDiagnostics
 
         if (fixedPoints.Count == 0)
         {
-            result.Diagnostics.Add(new ProjectDiagnostic(DiagnosticSeverity.Error, "高程网至少需要一个已知高程点作为基准。"));
+            result.Diagnostics.Add(new ProjectDiagnostic(DiagnosticSeverity.Error, "水准网至少需要一个已知高程点作为基准。"));
         }
 
         if (unknownPoints.Count == 0)
@@ -100,7 +100,7 @@ internal static class ProjectDiagnostics
         var redundancy = observations.Count - unknownPoints.Count;
         if (redundancy == 0 && !result.HasErrors)
         {
-            result.Diagnostics.Add(new ProjectDiagnostic(DiagnosticSeverity.Info, "当前高程网没有多余观测，可以解算，但无法计算单位权中误差。"));
+            result.Diagnostics.Add(new ProjectDiagnostic(DiagnosticSeverity.Info, "当前水准网没有多余观测，可以解算，但无法计算单位权中误差。"));
         }
         else if (redundancy > 0 && !result.HasErrors)
         {
@@ -221,7 +221,7 @@ internal static class ProjectDiagnostics
             project.HeightObservations.Select(obs => (obs.From, obs.To)).ToList(),
             point => point.IsHeightFixed && point.Height.HasValue,
             point => !point.IsHeightFixed,
-            "高程");
+            "水准");
     }
 
     private static void CheckDistanceConnectivity(AdjustmentProject project, ProjectValidationResult result)
@@ -243,7 +243,7 @@ internal static class ProjectDiagnostics
         Func<SurveyPoint, bool> isUnknown,
         string networkName)
     {
-        // 连通性检查按观测类型分别做；高程网只看高差边，测边网只看距离边。
+        // 连通性检查按观测类型分别做；水准网只看高差边，测边网只看距离边。
         var visited = new HashSet<SurveyPoint>();
 
         foreach (var start in project.Points)
