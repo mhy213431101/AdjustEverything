@@ -51,6 +51,7 @@ internal sealed class DrawingBoard : Control
         DrawGrid(g);
         DrawLines(g);
         DrawObservationLabels(g);
+        DrawAngles(g);
         DrawPoints(g);
     }
 
@@ -65,7 +66,13 @@ internal sealed class DrawingBoard : Control
             HandlePointClick(point, e.Location);
             return;
         }
-
+        var angleHit = HitTestAngle(e.Location);
+        if (angleHit != null)
+        {
+            SelectObject(angleHit);
+            StatusChanged?.Invoke(this, "选中角度观测。");
+            return;
+        }
         var observation = HitTestObservation(e.Location);
         if (observation is not null)
         {
@@ -319,28 +326,28 @@ internal sealed class DrawingBoard : Control
         }
     }
 
-    private bool IsLineSelected(BoardLine line)
+   private bool IsLineSelected(BoardLine line)
+{
+    return SelectedObject switch
     {
-        return SelectedObject switch
-        {
-            HeightObservation obs =>
-                ReferenceEquals(obs.From, line.From)
-                && ReferenceEquals(obs.To, line.To),
+        HeightObservation obs =>
+            ReferenceEquals(obs.From, line.From)
+            && ReferenceEquals(obs.To, line.To),
 
-            DistanceObservation obs =>
-                ReferenceEquals(obs.From, line.From)
-                && ReferenceEquals(obs.To, line.To),
+        DistanceObservation obs =>
+            ReferenceEquals(obs.From, line.From)
+            && ReferenceEquals(obs.To, line.To),
 
-            AngleObservation obs =>
-                (ReferenceEquals(obs.From, line.From)
-                 && ReferenceEquals(obs.Vertex, line.To))
-                ||
-                (ReferenceEquals(obs.Vertex, line.From)
-                 && ReferenceEquals(obs.To, line.To)),
+        AngleObservation obs =>
+            (ReferenceEquals(obs.From, line.From)
+             && ReferenceEquals(obs.Vertex, line.To))
+            ||
+            (ReferenceEquals(obs.Vertex, line.From)
+             && ReferenceEquals(obs.To, line.To)),
 
-            _ => false,
-        };
-    }
+        _ => false,
+    };
+}
 
     private void DrawObservationLabels(Graphics g)
     {
@@ -421,5 +428,65 @@ internal sealed class DrawingBoard : Control
         None,
         Height,
         Distance,
+    }
+
+    private void DrawAngles(Graphics g)
+    {
+        if (_project.AngleObservations == null)
+            return;
+
+        foreach (var angle in _project.AngleObservations)
+        {
+            bool selected = SelectedObject == angle;
+
+            var v = angle.Vertex.CanvasLocation;
+            var a = angle.From.CanvasLocation;
+            var c = angle.To.CanvasLocation;
+
+            float radius = 18f;
+
+            double a1 = Math.Atan2(a.Y - v.Y, a.X - v.X);
+            double a2 = Math.Atan2(c.Y - v.Y, c.X - v.X);
+
+            double start = a1 * 180.0 / Math.PI;
+            double sweep = (a2 - a1) * 180.0 / Math.PI;
+
+            if (sweep < 0) sweep += 360;
+
+            using var pen = new Pen(
+                selected ? Color.Red : Color.Orange,
+                selected ? 3f : 2f);
+
+            g.DrawArc(
+                pen,
+                v.X - radius,
+                v.Y - radius,
+                radius * 2,
+                radius * 2,
+                (float)start,
+                (float)sweep);
+        }
+    }
+
+    private AngleObservation? HitTestAngle(PointF p)
+    {
+        if (_project.AngleObservations == null)
+            return null;
+
+        foreach (var angle in _project.AngleObservations)
+        {
+            var v = angle.Vertex.CanvasLocation;
+
+            float dx = p.X - v.X;
+            float dy = p.Y - v.Y;
+
+            float dist = (float)Math.Sqrt(dx * dx + dy * dy);
+
+            // 和点一样：靠近测站点即可选中
+            if (dist <= 20f)
+                return angle;
+        }
+
+        return null;
     }
 }
