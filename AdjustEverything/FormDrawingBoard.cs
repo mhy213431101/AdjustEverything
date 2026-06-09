@@ -144,24 +144,35 @@ public partial class FormDrawingBoard : Form
             Padding = new Padding(12, 0, 0, 0),
             Font = new Font(Font, FontStyle.Bold),
         };
+
         var distanceCalculate = new Button
         {
-            Text = "▷ 测边网计算",
+            Text = "▷ 测边计算",
             Dock = DockStyle.Right,
-            Width = 160,
+            Width = 150,
             FlatStyle = FlatStyle.Flat,
         };
         distanceCalculate.Click += (_, _) => RunDistanceAdjustment();
         var heightCalculate = new Button
         {
-            Text = "▷ 水准网计算",
+            Text = "▷ 高程计算",
             Dock = DockStyle.Right,
-            Width = 160,
+            Width = 150,
             FlatStyle = FlatStyle.Flat,
         };
         heightCalculate.Click += (_, _) => RunHeightAdjustment();
+        var angleDistanceCalculate = new Button
+        {
+            Text = "▷ 边角网平差",
+            Dock = DockStyle.Right,
+            Width = 150,
+            FlatStyle = FlatStyle.Flat,
+        };
+        angleDistanceCalculate.Click += (_, _) => RunAngleDistanceAdjustment();
+
         boardHeader.Controls.Add(distanceCalculate);
         boardHeader.Controls.Add(heightCalculate);
+        boardHeader.Controls.Add(angleDistanceCalculate);
         boardHeader.Controls.Add(title);
         boardFrame.Controls.Add(boardHeader, 0, 0);
         boardFrame.Controls.Add(_board, 0, 1);
@@ -189,7 +200,7 @@ public partial class FormDrawingBoard : Form
         AddToolButton(panel, "○ 添加点", ToolMode.AddPoint);
         AddToolButton(panel, "─ 添加线", ToolMode.AddLine);
         AddToolButton(panel, "(x,y) 添加坐标", ToolMode.FixedCoordinate);
-        AddToolButton(panel, "∠α 添加角度", ToolMode.AddAngle);
+        AddToolButton(panel, "∠α 添加角", ToolMode.AddAngle);
         AddToolButton(panel, "↔ 添加距离", ToolMode.AddDistance);
         AddToolButton(panel, "↕ 添加高程", ToolMode.AddHeight);
 
@@ -201,7 +212,7 @@ public partial class FormDrawingBoard : Form
         };
         panel.Controls.Add(sample);
 
-        var heightCheck = BuildSideButton("检查水准网");
+        var heightCheck = BuildSideButton("检查高程网");
         heightCheck.Click += (_, _) => RunHeightNetworkCheck();
         panel.Controls.Add(heightCheck);
 
@@ -482,6 +493,7 @@ public partial class FormDrawingBoard : Form
 
             observation.Name = name;
             observation.Sigma = sigma;
+            observation.SetManualValue(value);
 
             RefreshProjectViews();
 
@@ -798,8 +810,8 @@ public partial class FormDrawingBoard : Form
 
         if (validation.HasErrors)
         {
-            _resultBox.Text = validation.ToReport("水准网检查");
-            _statusLabel.Text = "水准网检查未通过，请根据结果面板中的错误修改模型。";
+            _resultBox.Text = validation.ToReport("高程网检查");
+            _statusLabel.Text = "高程网检查未通过，请根据结果面板中的错误修改模型。";
             return;
         }
 
@@ -826,7 +838,7 @@ public partial class FormDrawingBoard : Form
         }
 
         //2. 导入模型
-        var model = new LevelHeightModel(
+        var model = new HeightModel(
             unknownPoints,
             observations,
             index,
@@ -841,7 +853,7 @@ public partial class FormDrawingBoard : Form
         //5. 报告生成
         var sb = new StringBuilder();
 
-        sb.AppendLine(validation.ToReport("水准网平差结果"));
+        sb.AppendLine(validation.ToReport("高程网平差结果"));
 
         sb.AppendLine("已知点信息：");
         foreach (var point in fixedPoints)
@@ -870,7 +882,7 @@ public partial class FormDrawingBoard : Form
         sb.AppendLine($"多余观测 r = {observations.Count - unknownPoints.Count}");
 
         sb.AppendLine();
-        sb.AppendLine("未知点水准 H(m)：");
+        sb.AppendLine("未知点高程 H(m)：");
         for (int i = 0; i < unknownPoints.Count; i++)
         {
             sb.AppendLine(
@@ -1060,10 +1072,10 @@ public partial class FormDrawingBoard : Form
     private void RunHeightNetworkCheck()
     {
         var validation = ProjectDiagnostics.ValidateHeightNetwork(_project);
-        _resultBox.Text = validation.ToReport("水准网检查");
+        _resultBox.Text = validation.ToReport("高程网检查");
         _statusLabel.Text = validation.HasErrors
-            ? "水准网检查未通过，请先修正错误。"
-            : "水准网检查通过，可以开始计算。";
+            ? "高程网检查未通过，请先修正错误。"
+            : "高程网检查通过，可以开始计算。";
     }
 
     private void RunDistanceNetworkCheck()
@@ -1127,8 +1139,143 @@ public partial class FormDrawingBoard : Form
             return Value.ToString() ?? "";
         }
     }
-}
 
+    private void FormDrawingBoard_Load(object sender, EventArgs e)
+    {
+
+    }
+
+private void RunAngleDistanceAdjustment()
+    {
+        var fixedPoints =
+            _project.Points
+                .Where(p =>
+                    p.IsCoordinateFixed &&
+                    p.X.HasValue &&
+                    p.Y.HasValue)
+                .ToList();
+
+        var unknownPoints =
+            _project.Points
+                .Where(p => !p.IsCoordinateFixed)
+                .ToList();
+
+        var distanceObs =
+            _project.DistanceObservations
+                .ToList();
+
+        var angleObs =
+            _project.AngleObservations
+                .ToList();
+
+
+        var parameterIndex =
+            new Dictionary<SurveyPoint, int>();
+
+        for (int i = 0; i < unknownPoints.Count; i++)
+        {
+            parameterIndex[
+                unknownPoints[i]]
+                = 2 * i;
+        }
+
+        var x0 =
+            new double[
+                unknownPoints.Count * 2];
+
+        for (int i = 0; i < unknownPoints.Count; i++)
+        {
+            var p = unknownPoints[i];
+
+            x0[2 * i]
+                = p.X
+                  ?? p.CanvasLocation.X;
+
+            x0[2 * i + 1]
+                = p.Y
+                  ?? p.CanvasLocation.Y;
+        }
+
+        var model =
+            new AngleDistanceModel(
+                unknownPoints,
+                distanceObs,
+                angleObs,
+                parameterIndex,
+                x0);
+
+        var result =
+            NonlinearLeastSquaresSolver
+                .Solve(
+                    model,
+                    model);
+
+        var precision =
+            PrecisionEstimator
+                .Estimate(
+                    result.LS);
+
+        var sb =
+            new StringBuilder();
+
+        sb.AppendLine(
+            "边角网平差结果");
+
+        sb.AppendLine();
+
+        sb.AppendLine(
+            result.Report);
+
+        sb.AppendLine();
+
+        sb.AppendLine(
+            "未知点坐标");
+
+        for (int i = 0;
+             i < unknownPoints.Count;
+             i++)
+        {
+            sb.AppendLine(
+                $"{unknownPoints[i].Name,-4} " +
+                $"X={result.XHat[2 * i]:F4} " +
+                $"Y={result.XHat[2 * i + 1]:F4}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine(
+            precision.Report);
+
+        _resultBox.Text =
+            sb.ToString();
+
+        if (result.Success)
+        {
+            for (int i = 0;
+                 i < unknownPoints.Count;
+                 i++)
+            {
+                unknownPoints[i].X =
+                    result.XHat[2 * i];
+
+                unknownPoints[i].Y =
+                    result.XHat[2 * i + 1];
+            }
+
+            _statusLabel.Text =
+                $"边角网平差完成（迭代 {result.Iterations} 次）";
+        }
+        else
+        {
+            _statusLabel.Text =
+                "边角网平差未收敛";
+        }
+
+        RefreshProjectViews();
+
+        ShowSelectionProperties(
+            _board.SelectedObject);
+    } 
+}
 internal enum ToolMode
 {
     Select,
