@@ -838,7 +838,7 @@ public partial class FormDrawingBoard : Form
         }
 
         //2. 导入模型
-        var model = new HeightModel(
+        var model = new LevelHeightModel(
             unknownPoints,
             observations,
             index,
