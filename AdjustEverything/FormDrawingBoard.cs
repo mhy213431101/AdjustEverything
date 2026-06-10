@@ -147,7 +147,7 @@ public partial class FormDrawingBoard : Form
 
         var distanceCalculate = new Button
         {
-            Text = "▷ 测边计算",
+            Text = "▷ 测边网平差",
             Dock = DockStyle.Right,
             Width = 150,
             FlatStyle = FlatStyle.Flat,
@@ -155,7 +155,7 @@ public partial class FormDrawingBoard : Form
         distanceCalculate.Click += (_, _) => RunDistanceAdjustment();
         var heightCalculate = new Button
         {
-            Text = "▷ 高程计算",
+            Text = "▷ 水准网平差",
             Dock = DockStyle.Right,
             Width = 150,
             FlatStyle = FlatStyle.Flat,
@@ -194,15 +194,15 @@ public partial class FormDrawingBoard : Form
             Padding = new Padding(12),
         };
 
-        AddToolButton(panel, "◎ 已知高程", ToolMode.FixedHeight);
-        AddToolButton(panel, "◎ 已知坐标", ToolMode.FixedCoordinate);
-        AddToolButton(panel, "━ 基线", ToolMode.Select);
+        AddToolButton(panel, " 选择对象", ToolMode.Select);
+        AddToolButton(panel, "◎ 添加已知高程点", ToolMode.FixedHeight);
+        AddToolButton(panel, "◎ 添加已知坐标点", ToolMode.AddKnownPoint);
+        AddToolButton(panel, "━ 添加基线", ToolMode.AddBaseLine);
         AddToolButton(panel, "○ 添加点", ToolMode.AddPoint);
         AddToolButton(panel, "─ 添加线", ToolMode.AddLine);
-        AddToolButton(panel, "(x,y) 添加坐标", ToolMode.FixedCoordinate);
-        AddToolButton(panel, "∠α 添加角", ToolMode.AddAngle);
-        AddToolButton(panel, "↔ 添加距离", ToolMode.AddDistance);
-        AddToolButton(panel, "↕ 添加高程", ToolMode.AddHeight);
+        AddToolButton(panel, "∠β 添加角度观测", ToolMode.AddAngle);
+        AddToolButton(panel, "↔ 添加距离观测", ToolMode.AddDistance);
+        AddToolButton(panel, "↕ 添加高差观测", ToolMode.AddHeight);
 
         var sample = BuildSideButton("载入示例网");
         sample.Click += (_, _) =>
@@ -212,7 +212,7 @@ public partial class FormDrawingBoard : Form
         };
         panel.Controls.Add(sample);
 
-        var heightCheck = BuildSideButton("检查高程网");
+        var heightCheck = BuildSideButton("检查水准网");
         heightCheck.Click += (_, _) => RunHeightNetworkCheck();
         panel.Controls.Add(heightCheck);
 
@@ -297,12 +297,14 @@ public partial class FormDrawingBoard : Form
         {
             ToolMode.AddPoint => "添加点：在画板空白处单击。",
             ToolMode.AddLine => "添加线：依次单击两个点，创建普通连线。",
+            ToolMode.AddBaseLine => "添加基线：依次点击两个已知坐标点，创建基线。",
             ToolMode.AddHeight => "添加高程：依次单击两个点，创建高差观测；数值在属性面板填写。",
             ToolMode.AddDistance => "添加距离：依次单击两个点，创建距离观测；数值在属性面板填写。",
             ToolMode.AddAngle => "添加角度：依次点击后视点A、测站点B、前视点C。",
             ToolMode.FixedHeight => "已知高程：单击点设为已知高程点；高程在属性面板修改。",
-            ToolMode.FixedCoordinate => "已知坐标：单击点设为已知平面点；X/Y 在属性面板修改。",
-            _ => "选择模式：单击点或观测查看属性。"
+            ToolMode.AddKnownPoint => "添加已知坐标点：在画板空白处单击添加已知坐标点；数值在属性面板修改。",
+            ToolMode.AddKnownSide => "添加已知边：依次单击两个点，创建已知边；数值在属性面板修改。",
+            ToolMode.Select => "选择模式：单击点或观测查看属性。"
         };
     }
 
@@ -332,12 +334,14 @@ public partial class FormDrawingBoard : Form
         b.IsHeightFixed = true;
         b.Height = 101.230;
 
-        a.IsCoordinateFixed = true;
-        a.X = 0.000;
-        a.Y = 0.000;
-        b.IsCoordinateFixed = true;
-        b.X = 0.000;
-        b.Y = 300.000;
+        _project.AddKnownPoint(a);
+        _project.AddKnownPoint(b);
+
+        a.X = 0;
+        a.Y = 0;
+        b.X = 0;
+        b.Y = 300;
+
         c.X = -180.000;
         c.Y = 80.000;
         d.X = 250.000;
@@ -370,6 +374,16 @@ public partial class FormDrawingBoard : Form
         foreach (var point in _project.Points)
         {
             _objectList.Items.Add(new ObjectListItem(point));
+        }
+
+        foreach (var point in _project.KnownPoints)
+        {
+            _objectList.Items.Add(new ObjectListItem(point));
+        }
+
+        foreach (var baseline in _project.Baselines)
+        {
+            _objectList.Items.Add(new ObjectListItem(baseline));
         }
 
         foreach (var obs in _project.HeightObservations)
@@ -416,6 +430,13 @@ public partial class FormDrawingBoard : Form
             case SurveyPoint point:
                 BuildPointProperties(point);
                 break;
+            case KnownPoint known:
+                BuildKnownPointProperties(known);
+                break;
+
+            case Baseline baseline:
+                BuildBaselineProperties(baseline);
+                break;
             case HeightObservation observation:
                 BuildHeightObservationProperties(observation);
                 break;
@@ -435,8 +456,143 @@ public partial class FormDrawingBoard : Form
                 break;
         }
     }
+
+    private void BuildPointProperties(SurveyPoint point)
+    {
+        var table = BuildPropertyTable();
+        var nameBox = AddTextRow(table, "点名", point.Name);
+
+        var fixedHeightCheck = AddCheckRow(table, "作为已知高程点", point.IsHeightFixed);
+        var heightBox = AddTextRow(table, "高程 H(m)", point.Height?.ToString("F4") ?? "");
+
+        var fixedCoordinateCheck = AddCheckRow(table, "作为已知平面坐标点", point.IsCoordinateFixed);
+        var xBox = AddTextRow(table, "X", point.X?.ToString("F4") ?? "");
+        var yBox = AddTextRow(table, "Y", point.Y?.ToString("F4") ?? "");
+
+        var apply = AddApplyButton(table);
+        var delete = AddDeleteButton(table);
+        apply.Click += (_, _) =>
+        {
+            if (string.IsNullOrWhiteSpace(nameBox.Text))
+            {
+                MessageBox.Show("点名不能为空。", "属性错误", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (!TryReadNullableDouble(heightBox.Text, "高程 H(m)", out var height)
+                || !TryReadNullableDouble(xBox.Text, "X", out var x)
+                || !TryReadNullableDouble(yBox.Text, "Y", out var y))
+            {
+                return;
+            }
+
+            point.Name = nameBox.Text.Trim();
+            point.IsHeightFixed = fixedHeightCheck.Checked;
+            point.Height = height;
+            point.IsCoordinateFixed = fixedCoordinateCheck.Checked;
+            point.X = x;
+            point.Y = y;
+            RefreshProjectViews();
+            _board.SelectObject(point);
+            _statusLabel.Text = $"点 {point.Name} 的属性已更新。";
+        };
+        delete.Click += (_, _) => DeleteSelectedObject();
+
+        _propertyPanel.Controls.Add(table);
+    }
+
+    private void BuildKnownPointProperties(KnownPoint known)
+    {
+        var table = BuildPropertyTable();
+        AddReadonlyRow(table, "点名", known.Point.Name);
+        AddReadonlyRow(table, "X", known.Point.X?.ToString("F4") ?? "");
+        AddReadonlyRow(table, "Y", known.Point.Y?.ToString("F4") ?? "");
+
+        var delete = AddDeleteButton(table);
+        delete.Click += (_, _) => DeleteSelectedObject();
+
+        _propertyPanel.Controls.Add(table);
+    }
+
+    private void BuildBaselineProperties(
+    Baseline baseline)
+    {
+        var table = BuildPropertyTable();
+        AddReadonlyRow(table, "名称", baseline.Name);
+        AddReadonlyRow(table, "起点", baseline.From.Name);
+        AddReadonlyRow(table, "终点", baseline.To.Name);
+        AddReadonlyRow(table, "长度(m)", baseline.Length.ToString("F4"));
+
+        var delete = AddDeleteButton(table);
+        delete.Click += (_, _) => DeleteSelectedObject();
+
+        _propertyPanel.Controls.Add(table);
+    }
+
+    private void BuildHeightObservationProperties(HeightObservation observation)
+    {
+        var table = BuildPropertyTable();
+        var nameBox = AddTextRow(table, "观测名", observation.Name);
+        AddReadonlyRow(table, "起点", observation.From.Name);
+        AddReadonlyRow(table, "终点", observation.To.Name);
+        var valueBox = AddTextRow(table, "高差 Δh(m)", observation.Value.ToString("F4"));
+        var lengthBox = AddTextRow(table, "测段长度 S(km)", observation.Length.ToString("F4"));
+        var sigmaBox = AddTextRow(table, "中误差 m(可选)", observation.Sigma.ToString("F4"));
+        var apply = AddApplyButton(table);
+        var delete = AddDeleteButton(table);
+
+        apply.Click += (_, _) =>
+        {
+            if (!ReadObservationHeight(nameBox, valueBox, lengthBox, sigmaBox, "高差 Δh(m)", out var name, out var value, out var length, out var sigma))
+            {
+                return;
+            }
+
+            observation.Name = name;
+            observation.Value = value;
+            observation.Length = length;
+            observation.Sigma = sigma;
+            RefreshProjectViews();
+            _board.SelectObject(observation);
+            _statusLabel.Text = $"高差观测 {observation.Name} 的属性已更新。";
+        };
+        delete.Click += (_, _) => DeleteSelectedObject();
+
+        _propertyPanel.Controls.Add(table);
+    }
+
+    private void BuildDistanceObservationProperties(DistanceObservation observation)
+    {
+        var table = BuildPropertyTable();
+        var nameBox = AddTextRow(table, "观测名", observation.Name);
+        AddReadonlyRow(table, "起点", observation.From.Name);
+        AddReadonlyRow(table, "终点", observation.To.Name);
+        var valueBox = AddTextRow(table, "距离 S(m)", observation.Value.ToString("F4"));
+        var sigmaBox = AddTextRow(table, "中误差 σ", observation.Sigma.ToString("F4"));
+        var apply = AddApplyButton(table);
+        var delete = AddDeleteButton(table);
+
+        apply.Click += (_, _) =>
+        {
+            if (!ReadObservationDistance(nameBox, valueBox, sigmaBox, "距离 S(m)", out var name, out var value, out var sigma))
+            {
+                return;
+            }
+
+            observation.Name = name;
+            observation.Value = value;
+            observation.Sigma = sigma;
+            RefreshProjectViews();
+            _board.SelectObject(observation);
+            _statusLabel.Text = $"距离观测 {observation.Name} 的属性已更新。";
+        };
+        delete.Click += (_, _) => DeleteSelectedObject();
+
+        _propertyPanel.Controls.Add(table);
+    }
+
     private void BuildAngleObservationProperties(
-    AngleObservation observation)
+AngleObservation observation)
     {
         var table = BuildPropertyTable();
 
@@ -508,112 +664,6 @@ public partial class FormDrawingBoard : Form
 
         _propertyPanel.Controls.Add(table);
     }
-    private void BuildPointProperties(SurveyPoint point)
-    {
-        var table = BuildPropertyTable();
-        var nameBox = AddTextRow(table, "点名", point.Name);
-
-        var fixedHeightCheck = AddCheckRow(table, "作为已知高程点", point.IsHeightFixed);
-        var heightBox = AddTextRow(table, "高程 H(m)", point.Height?.ToString("F4") ?? "");
-
-        var fixedCoordinateCheck = AddCheckRow(table, "作为已知平面坐标点", point.IsCoordinateFixed);
-        var xBox = AddTextRow(table, "X", point.X?.ToString("F4") ?? "");
-        var yBox = AddTextRow(table, "Y", point.Y?.ToString("F4") ?? "");
-
-        var apply = AddApplyButton(table);
-        var delete = AddDeleteButton(table);
-        apply.Click += (_, _) =>
-        {
-            if (string.IsNullOrWhiteSpace(nameBox.Text))
-            {
-                MessageBox.Show("点名不能为空。", "属性错误", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (!TryReadNullableDouble(heightBox.Text, "高程 H(m)", out var height)
-                || !TryReadNullableDouble(xBox.Text, "X", out var x)
-                || !TryReadNullableDouble(yBox.Text, "Y", out var y))
-            {
-                return;
-            }
-
-            point.Name = nameBox.Text.Trim();
-            point.IsHeightFixed = fixedHeightCheck.Checked;
-            point.Height = height;
-            point.IsCoordinateFixed = fixedCoordinateCheck.Checked;
-            point.X = x;
-            point.Y = y;
-            RefreshProjectViews();
-            _board.SelectObject(point);
-            _statusLabel.Text = $"点 {point.Name} 的属性已更新。";
-        };
-        delete.Click += (_, _) => DeleteSelectedObject();
-
-        _propertyPanel.Controls.Add(table);
-    }
-
-    private void BuildHeightObservationProperties(HeightObservation observation)
-    {
-        var table = BuildPropertyTable();
-        var nameBox = AddTextRow(table, "观测名", observation.Name);
-        AddReadonlyRow(table, "起点", observation.From.Name);
-        AddReadonlyRow(table, "终点", observation.To.Name);
-        var valueBox = AddTextRow(table, "高差 Δh(m)", observation.Value.ToString("F4"));
-        var lengthBox = AddTextRow(table, "测段长度 S(km)", observation.Length.ToString("F4"));
-        var sigmaBox = AddTextRow(table, "中误差 m(可选)", observation.Sigma.ToString("F4"));
-        var apply = AddApplyButton(table);
-        var delete = AddDeleteButton(table);
-
-        apply.Click += (_, _) =>
-        {
-            if (!ReadObservationHeight(nameBox, valueBox, lengthBox, sigmaBox, "高差 Δh(m)", out var name, out var value, out var length, out var sigma))
-            {
-                return;
-            }
-
-            observation.Name = name;
-            observation.Value = value;
-            observation.Length = length;
-            observation.Sigma = sigma;
-            RefreshProjectViews();
-            _board.SelectObject(observation);
-            _statusLabel.Text = $"高差观测 {observation.Name} 的属性已更新。";
-        };
-        delete.Click += (_, _) => DeleteSelectedObject();
-
-        _propertyPanel.Controls.Add(table);
-    }
-
-    private void BuildDistanceObservationProperties(DistanceObservation observation)
-    {
-        var table = BuildPropertyTable();
-        var nameBox = AddTextRow(table, "观测名", observation.Name);
-        AddReadonlyRow(table, "起点", observation.From.Name);
-        AddReadonlyRow(table, "终点", observation.To.Name);
-        var valueBox = AddTextRow(table, "距离 S(m)", observation.Value.ToString("F4"));
-        var sigmaBox = AddTextRow(table, "中误差 σ", observation.Sigma.ToString("F4"));
-        var apply = AddApplyButton(table);
-        var delete = AddDeleteButton(table);
-
-        apply.Click += (_, _) =>
-        {
-            if (!ReadObservationDistance(nameBox, valueBox, sigmaBox, "距离 S(m)", out var name, out var value, out var sigma))
-            {
-                return;
-            }
-
-            observation.Name = name;
-            observation.Value = value;
-            observation.Sigma = sigma;
-            RefreshProjectViews();
-            _board.SelectObject(observation);
-            _statusLabel.Text = $"距离观测 {observation.Name} 的属性已更新。";
-        };
-        delete.Click += (_, _) => DeleteSelectedObject();
-
-        _propertyPanel.Controls.Add(table);
-    }
-
     private static TableLayoutPanel BuildPropertyTable()
     {
         return new TableLayoutPanel
@@ -810,8 +860,8 @@ public partial class FormDrawingBoard : Form
 
         if (validation.HasErrors)
         {
-            _resultBox.Text = validation.ToReport("高程网检查");
-            _statusLabel.Text = "高程网检查未通过，请根据结果面板中的错误修改模型。";
+            _resultBox.Text = validation.ToReport("水准网检查");
+            _statusLabel.Text = "水准网检查未通过，请根据结果面板中的错误修改模型。";
             return;
         }
 
@@ -853,7 +903,7 @@ public partial class FormDrawingBoard : Form
         //5. 报告生成
         var sb = new StringBuilder();
 
-        sb.AppendLine(validation.ToReport("高程网平差结果"));
+        sb.AppendLine(validation.ToReport("水准网平差结果"));
 
         sb.AppendLine("已知点信息：");
         foreach (var point in fixedPoints)
@@ -1072,10 +1122,10 @@ public partial class FormDrawingBoard : Form
     private void RunHeightNetworkCheck()
     {
         var validation = ProjectDiagnostics.ValidateHeightNetwork(_project);
-        _resultBox.Text = validation.ToReport("高程网检查");
+        _resultBox.Text = validation.ToReport("水准网检查");
         _statusLabel.Text = validation.HasErrors
-            ? "高程网检查未通过，请先修正错误。"
-            : "高程网检查通过，可以开始计算。";
+            ? "水准网检查未通过，请先修正错误。"
+            : "水准网检查通过，可以开始计算。";
     }
 
     private void RunDistanceNetworkCheck()
@@ -1100,6 +1150,12 @@ public partial class FormDrawingBoard : Form
         {
             SurveyPoint point =>
                 $"点 {point.Name}",
+
+            KnownPoint point =>
+                $"已知点 {point.Point.Name}",
+
+            Baseline baseline =>
+                $"基线 {baseline.Name}",
 
             HeightObservation observation =>
                 $"高差观测 {observation.Name}",
@@ -1280,10 +1336,12 @@ internal enum ToolMode
 {
     Select,
     AddPoint,
+    AddKnownPoint,
+    AddKnownSide,
     AddLine,
+    AddBaseLine,
     AddHeight,
     AddDistance,
     AddAngle,
-    FixedHeight,
-    FixedCoordinate,
+    FixedHeight
 }

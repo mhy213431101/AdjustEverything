@@ -130,71 +130,72 @@ namespace MeasurementAdjustment
         {
         try
         {
-        // 读取输入
-        double[,] A = MatrixUtility.ParseMatrix(txtParamConditionA.Text);   // r×n
-        double[,] B = MatrixUtility.ParseMatrix(txtParamConditionB.Text);   // r×u
-        double[,] W = MatrixUtility.ParseMatrix(txtParamConditionW.Text);   // r×1
-        double[,] L = MatrixUtility.ParseMatrix(txtParamConditionL.Text);   // n×1
-        double[,] P = string.IsNullOrWhiteSpace(txtParamConditionP.Text)
-            ? MatrixUtility.Identity(L.GetLength(0))
-            : MatrixUtility.ParseMatrix(txtParamConditionP.Text);           // n×n
+                // 读取输入
+                double[,] A = MatrixUtility.ParseMatrix(txtParamConditionA.Text);   // r×n
+                double[,] B = MatrixUtility.ParseMatrix(txtParamConditionB.Text);   // r×u
+                double[,] W = MatrixUtility.ParseMatrix(txtParamConditionW.Text);   // r×1
+                double[,] L = MatrixUtility.ParseMatrix(txtParamConditionL.Text);   // n×1
+                double[,] P = string.IsNullOrWhiteSpace(txtParamConditionP.Text)
+                    ? MatrixUtility.Identity(L.GetLength(0))
+                    : MatrixUtility.ParseMatrix(txtParamConditionP.Text);           // n×n
 
-        int n = L.GetLength(0);   // 观测值个数
-        int r = A.GetLength(0);   // 条件方程个数
-        int u = B.GetLength(1);   // 参数个数
+                int n = L.GetLength(0);   // 观测值个数
+                int r = A.GetLength(0);   // 条件方程个数
+                int u = B.GetLength(1);   // 参数个数
 
-        // 输入合法性检查
-        if (A.GetLength(1) != n) throw new Exception("A的列数必须等于观测值个数 n");
-        if (B.GetLength(0) != r) throw new Exception("B的行数必须等于条件方程个数 r");
-        if (W.GetLength(0) != r || W.GetLength(1) != 1) throw new Exception("W必须是 r×1 列向量");
-        if (L.GetLength(1) != 1) throw new Exception("L必须是 n×1 列向量");
-        if (P.GetLength(0) != n || P.GetLength(1) != n) throw new Exception("P必须是 n×n 方阵");
+                // 输入合法性检查
+                if (A.GetLength(1) != n) throw new Exception("A的列数必须等于观测值个数 n");
+                if (B.GetLength(0) != r) throw new Exception("B的行数必须等于条件方程个数 r");
+                if (W.GetLength(0) != r || W.GetLength(1) != 1) throw new Exception("W必须是 r×1 列向量");
+                if (L.GetLength(1) != 1) throw new Exception("L必须是 n×1 列向量");
+                if (P.GetLength(0) != n || P.GetLength(1) != n) throw new Exception("P必须是 n×n 方阵");
 
-        // 权逆阵 Q = P⁻¹
-        double[,] Q = MatrixUtility.Inverse(P);
+                // 权逆阵 Q = P⁻¹
+                double[,] Q = MatrixUtility.Inverse(P);
 
-        // 计算 Nbb = A Q Aᵀ
-        double[,] AQ = MatrixUtility.Multiply(A, Q);
-        double[,] Nbb = MatrixUtility.Multiply(AQ, MatrixUtility.Transpose(A));  // r×r
+                // 计算 Nbb = A Q Aᵀ
+                double[,] AQ = MatrixUtility.Multiply(A, Q);
+                double[,] Nbb = MatrixUtility.Multiply(AQ, MatrixUtility.Transpose(A));  // r×r
 
-        // 构建法方程系数矩阵 M = [Nbb, B; Bᵀ, 0]
-        double[,] M = new double[r + u, r + u];
-        for (int i = 0; i < r; i++)
-            for (int j = 0; j < r; j++)
-                M[i, j] = Nbb[i, j];
-        for (int i = 0; i < r; i++)
-            for (int j = 0; j < u; j++)
-                M[i, r + j] = B[i, j];
-        for (int i = 0; i < u; i++)
-            for (int j = 0; j < r; j++)
-                M[r + i, j] = B[j, i];
+                // 构建法方程系数矩阵 M = [Nbb, B; Bᵀ, 0]
+                double[,] M = new double[r + u, r + u];
+                for (int i = 0; i < r; i++)
+                    for (int j = 0; j < r; j++)
+                        M[i, j] = Nbb[i, j];
+                for (int i = 0; i < r; i++)
+                    for (int j = 0; j < u; j++)
+                        M[i, r + j] = B[i, j];
+                for (int i = 0; i < u; i++)
+                    for (int j = 0; j < r; j++)
+                        M[r + i, j] = B[j, i];
 
-        // 构建右端项 RHS = [-W; 0]
-        double[,] RHS = new double[r + u, 1];
-        for (int i = 0; i < r; i++)
-            RHS[i, 0] = -W[i, 0];
+                // 构建右端项 RHS = [-W; 0]
+                double[,] RHS = new double[r + u, 1];
+                for (int i = 0; i < r; i++)
+                    RHS[i, 0] = -W[i, 0];
 
-        // 解算 [K; x]
-        double[,] sol = MatrixUtility.SolveLinear(M, RHS);
-        double[,] K = ExtractSubMatrix(sol, 0, r);      // r×1
-        double[,] x = ExtractSubMatrix(sol, r, u);      // u×1
+                // 解算 [K; x]
+                double[,] sol = MatrixUtility.SolveLinear(M, RHS);
+                double[,] K = ExtractSubMatrix(sol, 0, r);      // r×1
+                double[,] x = ExtractSubMatrix(sol, r, u);      // u×1
 
-        // 计算改正数 V = -Q * Aᵀ * K
-        double[,] AT = MatrixUtility.Transpose(A);      // n×r
-        double[,] ATK = MatrixUtility.Multiply(AT, K);  // n×1
-        double[,] Q_ATK = MatrixUtility.Multiply(Q, ATK); // n×1
-        double[,] V = MatrixUtility.MultiplyScalar(Q_ATK, -1.0);
+                // 计算改正数 V = -Q * Aᵀ * K
+                double[,] AT = MatrixUtility.Transpose(A);      // n×r
+                double[,] ATK = MatrixUtility.Multiply(AT, K);  // n×1
+                double[,] Q_ATK = MatrixUtility.Multiply(Q, ATK); // n×1
+                double[,] V = MatrixUtility.MultiplyScalar(Q_ATK, -1.0);
 
-        // 平差值 L̂ = L + V
-        double[,] L_hat = MatrixUtility.AddMatrix(L, V);
+                // 平差值 L̂ = L + V
+                double[,] L_hat = MatrixUtility.AddMatrix(L, V);
 
-        // 
-        txtParamConditionResult.Text = FormatParamConditionResult(W, M, K, x, V, L_hat);
-        }
-        catch (Exception ex)
-        {
-        MessageBox.Show("计算错误: " + ex.Message);
-        }
+                // 
+                txtParamConditionResult.Text = FormatParamConditionResult(W, M, K, x, V, L_hat);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("计算错误: " + ex.Message);
+            }
+
         }
         private string FormatParamConditionResult(double[,] W, double[,] M, double[,] K, double[,] x, double[,] V, double[,] L_hat)
         {

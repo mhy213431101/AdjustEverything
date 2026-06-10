@@ -1,18 +1,25 @@
 using System.ComponentModel.DataAnnotations;
+using System.Drawing;
 
 namespace AdjustEverything;
 
 internal sealed class AdjustmentProject
 {
     private int _pointSerial = 1;
+    private int _baselineSerial = 1;
+    private int _knownSideSerial = 1;
     private int _heightSerial = 1;
     private int _distanceSerial = 1;
     private int _angleSerial = 1;
+
     public List<SurveyPoint> Points { get; } = [];
     public List<HeightObservation> HeightObservations { get; } = [];
     public List<DistanceObservation> DistanceObservations { get; } = [];
     public List<AngleObservation> AngleObservations { get; } = [];
     public List<BoardLine> Lines { get; } = [];
+    public List<KnownPoint> KnownPoints { get; } = [];
+    public List<KnownSide> KnownSides { get; } = [];
+    public List<Baseline> Baselines { get; } = [];
 
     public SurveyPoint AddPoint(string? name, PointF canvasLocation)
     {
@@ -28,6 +35,26 @@ internal sealed class AdjustmentProject
         return point;
     }
 
+    public KnownPoint AddKnownPoint(SurveyPoint point)
+    {
+        var existing = KnownPoints.FirstOrDefault(p => ReferenceEquals(p.Point, point));
+
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        point.IsCoordinateFixed = true;
+
+        var known = new KnownPoint
+        {
+            Point = point
+        };
+
+        KnownPoints.Add(known);
+        return known;
+    }
+
     public BoardLine AddLine(SurveyPoint from, SurveyPoint to)
     {
         var existing = Lines.FirstOrDefault(line => line.Connects(from, to));
@@ -39,6 +66,21 @@ internal sealed class AdjustmentProject
         var line = new BoardLine(from, to);
         Lines.Add(line);
         return line;
+    }
+
+    public KnownSide AddKnownSide(SurveyPoint from, SurveyPoint to, double length)
+    {
+        AddLine(from, to);
+        var side = new KnownSide
+        {
+            Name = $"k{_knownSideSerial++}",
+            From = from,
+            To = to,
+            Length = length
+        };
+
+        KnownSides.Add(side);
+        return side;
     }
 
     public HeightObservation AddHeightObservation(SurveyPoint from, SurveyPoint to, double value, double length)
@@ -57,6 +99,37 @@ internal sealed class AdjustmentProject
         return observation;
     }
 
+    public Baseline AddBaseline(SurveyPoint from, SurveyPoint to)
+    {
+        bool known1 = KnownPoints.Any(
+                p =>
+                    ReferenceEquals(
+                        p.Point,
+                        from));
+
+        bool known2 = KnownPoints.Any(
+                p =>
+                    ReferenceEquals(
+                        p.Point,
+                        to));
+
+        if (!known1 || !known2)
+        {
+            throw new InvalidOperationException("基线两端必须为已知点。");
+        }
+
+        AddLine(from, to);
+
+        var baseline = new Baseline
+        {
+            Name = $"b{_baselineSerial++}",
+            From = from,
+            To = to
+        };
+
+        Baselines.Add(baseline);
+        return baseline;
+    }
     public DistanceObservation AddDistanceObservation(SurveyPoint from, SurveyPoint to, double value)
     {
         AddLine(from, to);
@@ -104,7 +177,29 @@ internal sealed class AdjustmentProject
         DistanceObservations.RemoveAll(obs => ReferenceEquals(obs.From, point) || ReferenceEquals(obs.To, point));
         AngleObservations.RemoveAll(obs => ReferenceEquals(obs.From, point) || ReferenceEquals(obs.Vertex, point) || ReferenceEquals(obs.To, point));
         Lines.RemoveAll(line => ReferenceEquals(line.From, point) || ReferenceEquals(line.To, point));
-        Points.Remove(point);
+        Points.Remove(point); 
+    }
+
+    public void RemoveKnownPoint(KnownPoint point)
+    {
+        HeightObservations.RemoveAll(obs => ReferenceEquals(obs.From, point) || ReferenceEquals(obs.To, point));
+        DistanceObservations.RemoveAll(obs => ReferenceEquals(obs.From, point) || ReferenceEquals(obs.To, point));
+        AngleObservations.RemoveAll(obs => ReferenceEquals(obs.From, point) || ReferenceEquals(obs.Vertex, point) || ReferenceEquals(obs.To, point));
+        Lines.RemoveAll(line => ReferenceEquals(line.From, point) || ReferenceEquals(line.To, point));
+        Baselines.RemoveAll(baseline => ReferenceEquals(baseline.From, point) || ReferenceEquals(baseline.To, point));
+        KnownPoints.Remove(point);
+    }
+
+    public void RemoveKnownSide(KnownSide side)
+    {
+        KnownSides.Remove(side);
+        RemoveLineIfUnused(side.From, side.To);
+    }
+
+    public void RemoveBaseline(Baseline baseline)
+    {
+        Baselines.Remove(baseline);
+        RemoveLineIfUnused(baseline.From, baseline.To);
     }
 
     public void RemoveHeightObservation(HeightObservation observation)
@@ -139,6 +234,15 @@ internal sealed class AdjustmentProject
             case AngleObservation observation:
                 RemoveAngleObservation(observation);
                 break;
+            case Baseline baseline:
+                RemoveBaseline(baseline);
+                break;
+            case KnownPoint knownPoint:
+                RemoveKnownPoint(knownPoint);
+                break;
+            case KnownSide knownSide:
+                RemoveKnownSide(knownSide);
+                break;
         }
     }
 
@@ -146,10 +250,16 @@ internal sealed class AdjustmentProject
     {
         Points.Clear();
         Lines.Clear();
+        KnownPoints.Clear();
+        KnownSides.Clear();
+        Baselines.Clear();
         HeightObservations.Clear();
         DistanceObservations.Clear();
         AngleObservations.Clear();
+
         _pointSerial = 1;
+        _baselineSerial = 1;
+        _knownSideSerial = 1;
         _heightSerial = 1;
         _distanceSerial = 1;
         _angleSerial = 1;
@@ -218,6 +328,37 @@ internal sealed class SurveyPoint
     }
 }
 
+internal sealed class KnownPoint
+{
+    public required SurveyPoint Point { get; init; }
+
+    public override string ToString()
+    {
+        return
+            $"{Point.Name} " +
+            $"({Point.X:F3},{Point.Y:F3})";
+    }
+}
+
+internal sealed class KnownSide
+{
+    public required string Name { get; set; }
+
+    public required SurveyPoint From { get; init; }
+
+    public required SurveyPoint To { get; init; }
+
+    public required double Length { get; set; }
+
+    public override string ToString()
+    {
+        return
+            $"{Name}: " +
+            $"{From.Name}-{To.Name} " +
+            $"L={Length:F3}";
+    }
+}
+
 internal sealed class BoardLine(SurveyPoint from, SurveyPoint to)
 {
     public SurveyPoint From { get; } = from;
@@ -227,6 +368,43 @@ internal sealed class BoardLine(SurveyPoint from, SurveyPoint to)
     {
         return ReferenceEquals(From, a) && ReferenceEquals(To, b)
             || ReferenceEquals(From, b) && ReferenceEquals(To, a);
+    }
+}
+
+internal sealed class Baseline()
+{
+    public required string Name { get; set; }
+
+    public required SurveyPoint From { get; init; }
+
+    public required SurveyPoint To { get; init; }
+
+    public double Length
+    {
+        get
+        {
+            if (!From.X.HasValue ||
+                !From.Y.HasValue ||
+                !To.X.HasValue ||
+                !To.Y.HasValue)
+            {
+                return 0.0;
+            }
+
+            var dx = To.X.Value - From.X.Value;
+            var dy = To.Y.Value - From.Y.Value;
+
+            return Math.Sqrt(
+                dx * dx +
+                dy * dy);
+        }
+    }
+
+    public override string ToString()
+    {
+        return
+            $"{Name}: {From.Name}-{To.Name}  " +
+            $"L={Length:F3} m";
     }
 }
 
@@ -259,7 +437,6 @@ internal sealed class DistanceObservation
     }
 }
 
-
 /// <summary>
 /// 角度观测
 /// ∠ABC
@@ -273,22 +450,18 @@ internal sealed class AngleObservation
     /// 观测名称
     /// </summary>
     public required string Name { get; set; }
-
     /// <summary>
     /// 后视点A
     /// </summary>
     public required SurveyPoint From { get; init; }
-
     /// <summary>
     /// 测站点B
     /// </summary>
     public required SurveyPoint Vertex { get; init; }
-
     /// <summary>
     /// 前视点C
     /// </summary>
     public required SurveyPoint To { get; init; }
-
     /// <summary>
     /// 角度值(度)
     /// </summary>
@@ -318,29 +491,20 @@ internal sealed class AngleObservation
             if (len1 < 1e-6 || len2 < 1e-6)
                 return 0.0;
 
-            var cos =
-                dot /
-                (len1 * len2);
+            var cos = dot / (len1 * len2);
 
-            cos = Math.Max(
-                -1.0,
-                Math.Min(
-                    1.0,
-                    cos));
+            cos = Math.Max(-1.0, Math.Min(1.0, cos));
 
-            return
-                Math.Acos(cos)
-                * 180.0
-                / Math.PI;
+            return Math.Acos(cos) * 180.0 / Math.PI;
         }
     }
+
     public double Sigma { get; set; }
 
     /// <summary>
     /// 弧度值
     /// </summary>
-    public double ValueRad =>
-        Value * Math.PI / 180.0;
+    public double ValueRad => Value * Math.PI / 180.0;
 
     public void SetManualValue(double value)
     {

@@ -127,6 +127,9 @@ internal sealed class DrawingBoard : Control
             case ToolMode.AddLine:
                 ConnectPoint(point, ObservationCreation.None);
                 break;
+            case ToolMode.AddBaseLine:
+                ConnectPoint(point, ObservationCreation.Baseline);
+                break;
             case ToolMode.AddHeight:
                 ConnectPoint(point, ObservationCreation.Height);
                 break;
@@ -143,9 +146,9 @@ internal sealed class DrawingBoard : Control
                 ProjectChanged?.Invoke(this, EventArgs.Empty);
                 StatusChanged?.Invoke(this, $"点 {point.Name} 已设为已知高程点，可在属性面板修改高程。");
                 break;
-            case ToolMode.FixedCoordinate:
+            case ToolMode.AddKnownPoint:
                 SelectObject(point);
-                point.IsCoordinateFixed = true;
+                _project.AddKnownPoint(point);
                 point.X ??= point.CanvasLocation.X;
                 point.Y ??= point.CanvasLocation.Y;
                 ProjectChanged?.Invoke(this, EventArgs.Empty);
@@ -220,6 +223,11 @@ internal sealed class DrawingBoard : Control
 
         switch (creation)
         {
+            case ObservationCreation.Baseline:
+                var baseline = _project.AddBaseline(_pendingPoint, point);
+                SelectObject(baseline);
+                StatusChanged?.Invoke(this, $"已创建基线 {baseline.Name}");
+                break;
             case ObservationCreation.Height:
                 var height = _project.AddHeightObservation(_pendingPoint, point, 0.0, 0.0);
                 SelectObject(height);
@@ -229,6 +237,11 @@ internal sealed class DrawingBoard : Control
                 var distance = _project.AddDistanceObservation(_pendingPoint, point, 0.0);
                 SelectObject(distance);
                 StatusChanged?.Invoke(this, $"已添加距离观测 {distance.Name}，可在属性面板填写距离和中误差。");
+                break;
+            case ObservationCreation.Angle:
+                var angle = _project.AddAngleObservation(_pendingPoint, _angleVertex, point);
+                SelectObject(angle);
+                StatusChanged?.Invoke(this, $"已添加距离观测 {angle.Name}，可在属性面板填写距离和中误差。");
                 break;
             default:
                 _project.AddLine(_pendingPoint, point);
@@ -294,6 +307,11 @@ internal sealed class DrawingBoard : Control
         };
     }
 
+    private bool IsBaseline(BoardLine line)
+    {
+        return _project.Baselines.Any(b => line.Connects(b.From, b.To));
+    }
+
     private static void DrawGrid(Graphics g)
     {
         using var gridPen = new Pen(Color.FromArgb(225, 229, 229), 1);
@@ -306,6 +324,51 @@ internal sealed class DrawingBoard : Control
         {
             g.DrawLine(gridPen, 0, y, g.VisibleClipBounds.Width, y);
         }
+    }
+
+    private static void DrawBaseline(Graphics g, BoardLine line, bool selected)
+    {
+        var p1 = line.From.CanvasLocation;
+        var p2 = line.To.CanvasLocation;
+
+        var dx = p2.X - p1.X;
+        var dy = p2.Y - p1.Y;
+
+        var len =
+            Math.Sqrt(
+                dx * dx +
+                dy * dy);
+
+        if (len < 1e-6)
+        {
+            return;
+        }
+
+        dx /= (float)len;
+        dy /= (float)len;
+
+        float offset = 3f;
+
+        var nx = -dy * offset;
+        var ny = dx * offset;
+
+        using var pen = new Pen(
+            selected ? Color.FromArgb(31, 94, 184) : Color.Black,
+            selected ? 3f : 2f);
+
+        g.DrawLine(
+            pen,
+            p1.X + nx,
+            p1.Y + ny,
+            p2.X + nx,
+            p2.Y + ny);
+
+        g.DrawLine(
+            pen,
+            p1.X - nx,
+            p1.Y - ny,
+            p2.X - nx,
+            p2.Y - ny);
     }
 
     private void DrawLines(Graphics g)
@@ -322,11 +385,18 @@ internal sealed class DrawingBoard : Control
                 EndCap = LineCap.Round,
             };
 
-            g.DrawLine(linePen, line.From.CanvasLocation, line.To.CanvasLocation);
+            if (IsBaseline(line))
+            {
+                DrawBaseline(g, line, selected);
+            }
+            else
+            {
+                g.DrawLine(linePen, line.From.CanvasLocation, line.To.CanvasLocation);
+            }
         }
     }
 
-   private bool IsLineSelected(BoardLine line)
+    private bool IsLineSelected(BoardLine line)
 {
     return SelectedObject switch
     {
@@ -355,13 +425,19 @@ internal sealed class DrawingBoard : Control
 
         foreach (var obs in _project.HeightObservations)
         {
-            DrawObservationLabel(g, font, obs.From, obs.To, obs.Name, -18, ReferenceEquals(SelectedObject, obs));
+            DrawObservationLabel(g, font, obs.From, obs.To, obs.Name, 6, -18, ReferenceEquals(SelectedObject, obs));
         }
 
         foreach (var obs in _project.DistanceObservations)
         {
-            DrawObservationLabel(g, font, obs.From, obs.To, obs.Name, 4, ReferenceEquals(SelectedObject, obs));
+            DrawObservationLabel(g, font, obs.From, obs.To, obs.Name, 6, 4, ReferenceEquals(SelectedObject, obs));
         }
+
+        foreach (var obs in _project.AngleObservations)
+        {
+            DrawAngelObsLabel(g, font, obs.Vertex, obs.Name, 10, 0, ReferenceEquals(SelectedObject, obs));
+        }
+
     }
 
     private static void DrawObservationLabel(
@@ -370,6 +446,7 @@ internal sealed class DrawingBoard : Control
         SurveyPoint from,
         SurveyPoint to,
         string label,
+        float offsetX,
         float offsetY,
         bool selected)
     {
@@ -377,7 +454,21 @@ internal sealed class DrawingBoard : Control
             (from.CanvasLocation.X + to.CanvasLocation.X) / 2F,
             (from.CanvasLocation.Y + to.CanvasLocation.Y) / 2F);
         using var brush = new SolidBrush(selected ? Color.FromArgb(31, 94, 184) : Color.FromArgb(30, 36, 42));
-        g.DrawString(label, font, brush, mid.X + 6, mid.Y + offsetY);
+        g.DrawString(label, font, brush, mid.X + offsetX, mid.Y + offsetY);
+    }
+
+    private static void DrawAngelObsLabel(
+    Graphics g,
+    Font font,
+    SurveyPoint vertex,
+    string label,
+    float offsetX,
+    float offsetY,
+    bool selected)
+    {
+        var mid = new PointF(vertex.CanvasLocation.X, vertex.CanvasLocation.Y);
+        using var brush = new SolidBrush(selected ? Color.FromArgb(31, 94, 184) : Color.FromArgb(30, 36, 42));
+        g.DrawString(label, font, brush, mid.X + offsetX, mid.Y + offsetY);
     }
 
     private void DrawPoints(Graphics g)
@@ -421,13 +512,6 @@ internal sealed class DrawingBoard : Control
                 g.DrawString($"H={point.Height.Value:F3}", valueFont, textBrush, center.X + 12, center.Y - 14);
             }
         }
-    }
-
-    private enum ObservationCreation
-    {
-        None,
-        Height,
-        Distance,
     }
 
     private void DrawAngles(Graphics g)
@@ -488,5 +572,15 @@ internal sealed class DrawingBoard : Control
         }
 
         return null;
+    }
+
+    private enum ObservationCreation
+    {
+        None,
+        Baseline,
+        Height,
+        Distance,
+        Angle
+        
     }
 }
