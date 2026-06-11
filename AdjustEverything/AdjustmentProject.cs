@@ -163,7 +163,6 @@ internal sealed class AdjustmentProject
 
                 To = to,
 
-
                 Sigma = 1.0
             };
 

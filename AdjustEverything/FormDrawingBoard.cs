@@ -236,6 +236,9 @@ public partial class FormDrawingBoard : Form
         angleCheck.Click += (_, _) => RunAngleNetworkCheck();
         panel.Controls.Add(angleCheck);
 
+        var angledistanceCheck = BuildSideButton("检查边角网");
+        angledistanceCheck.Click += (_, _) => RunAngleDistanceNetworkCheck();
+        panel.Controls.Add(angledistanceCheck);
 
         var delete = BuildSideButton("删除所选");
         delete.Click += (_, _) => DeleteSelectedObject();
@@ -1249,6 +1252,163 @@ AngleObservation observation)
         ShowSelectionProperties(_board.SelectedObject);
     }
 
+    private void RunAngleDistanceAdjustment()
+    {
+        var validation = ProjectDiagnostics.ValidateAngleDistanceNetwork(_project);
+
+        if (validation.HasErrors)
+        {
+            _resultBox.Text = validation.ToReport("边角网检查");
+            _statusLabel.Text = "边角网检查未通过，请根据结果面板中的错误修改模型。";
+
+            return;
+        }
+
+        try
+        {
+            var fixedPoints =
+            _project.Points
+            .Where(p =>
+                p.IsCoordinateFixed &&
+                p.X.HasValue &&
+                p.Y.HasValue)
+                 .ToList();
+
+            var unknownPoints =
+                _project.Points
+                    .Where(p => !p.IsCoordinateFixed)
+                    .ToList();
+
+            var distanceObs =
+                _project.DistanceObservations
+                    .ToList();
+
+            var angleObs =
+                _project.AngleObservations
+                    .ToList();
+
+
+            var parameterIndex =
+                new Dictionary<SurveyPoint, int>();
+
+            for (int i = 0; i < unknownPoints.Count; i++)
+            {
+                parameterIndex[
+                    unknownPoints[i]]
+                    = 2 * i;
+            }
+
+            var x0 =
+                new double[
+                    unknownPoints.Count * 2];
+
+            for (int i = 0; i < unknownPoints.Count; i++)
+            {
+                var p = unknownPoints[i];
+
+                x0[2 * i]
+                    = p.X
+                      ?? p.CanvasLocation.X;
+
+                x0[2 * i + 1]
+                    = p.Y
+                      ?? p.CanvasLocation.Y;
+            }
+
+            var model =
+                new AngleDistanceModel(
+                    unknownPoints,
+                    distanceObs,
+                    angleObs,
+                    parameterIndex,
+                    x0);
+
+            var result =
+                NonlinearLeastSquaresSolver
+                    .Solve(
+                        model,
+                        model);
+
+            var precision =
+                PrecisionEstimator
+                    .Estimate(
+                        result.LS);
+
+            var sb = new System.Text.StringBuilder();
+
+            sb.AppendLine(validation.ToReport("边角网平差结果"));
+            sb.AppendLine();
+
+            sb.AppendLine("未知点信息：");
+            foreach (var point in unknownPoints)
+                sb.AppendLine(point.ToString());
+            sb.AppendLine();
+
+            sb.AppendLine("观测信息：");
+            foreach (var obs in angleObs)
+                sb.AppendLine(obs.ToString());
+            foreach (var obs in distanceObs)
+                sb.AppendLine(obs.ToString());
+            sb.AppendLine();
+
+            sb.AppendLine($"观测数 n = {angleObs.Count + distanceObs.Count}");
+            sb.AppendLine($"未知数 t = {unknownPoints.Count * 2}");
+            sb.AppendLine($"多余观测 r = {angleObs.Count + distanceObs.Count - unknownPoints.Count * 2}");
+            sb.AppendLine();
+
+            sb.AppendLine("未知点坐标(m)：");
+            for (int i = 0; i < unknownPoints.Count; i++)
+            {
+                var p = unknownPoints[i];
+                sb.AppendLine($"{p.Name,-6} X={result.XHat[2 * i]:F4} Y={result.XHat[2 * i + 1]:F4}");
+            }
+            sb.AppendLine();
+
+            sb.AppendLine("观测改正数 v(″，mm)：");
+
+            for (int i = 0; i < angleObs.Count; i++)
+            {
+                sb.AppendLine(
+                    $"{angleObs[i].Name,-6} " +
+                    $"{result.LS.V[i]:F2}");
+            }
+            for (int i = (angleObs.Count - 1); i < (angleObs.Count + distanceObs.Count); i++)
+            {
+                int j = 0;
+                sb.AppendLine(
+                    $"{distanceObs[j].Name,-6} " +
+                    $"{result.LS.V[i]:F2}");
+                j++;
+            }
+
+
+            sb.AppendLine(precision.Report);
+
+            _resultBox.Text = sb.ToString();
+
+            if (result.Success)
+            {
+                for (int i = 0; i < unknownPoints.Count; i++)
+                {
+                    unknownPoints[i].X = result.XHat[2 * i];
+                    unknownPoints[i].Y = result.XHat[2 * i + 1];
+                }
+                _statusLabel.Text = $"边角网平差完成（迭代 {result.Iterations} 次）";
+            }
+            else
+                _statusLabel.Text = "边角网平差未收敛";
+        }
+        catch (Exception ex)
+        {
+            _resultBox.Text = "边角网平差失败\r\n\r\n" + ex.Message;
+            _statusLabel.Text = "计算失败";
+        }
+
+        RefreshProjectViews();
+        ShowSelectionProperties(_board.SelectedObject);
+    }
+
+
     private void RunHeightNetworkCheck()
     {
         var validation = ProjectDiagnostics.ValidateHeightNetwork(_project);
@@ -1276,6 +1436,17 @@ AngleObservation observation)
         _statusLabel.Text = validation.HasErrors
             ? "测角网检查未通过，请先修正错误。"
             : "测角网检查通过，可以开始计算。";
+    }
+
+    private void RunAngleDistanceNetworkCheck()
+    {
+        var validation = ProjectDiagnostics.ValidateAngleDistanceNetwork(_project);
+
+        _resultBox.Text = validation.ToReport("边角网检查");
+
+        _statusLabel.Text = validation.HasErrors
+            ? "边角网检查未通过，请先修正错误。"
+            : "边角网检查通过，可以开始计算。";
     }
 
     private void DeleteSelectedObject()
@@ -1337,141 +1508,6 @@ AngleObservation observation)
         }
     }
 
-    private void FormDrawingBoard_Load(object sender, EventArgs e)
-    {
-
-    }
-
-private void RunAngleDistanceAdjustment()
-    {
-        var fixedPoints =
-            _project.Points
-                .Where(p =>
-                    p.IsCoordinateFixed &&
-                    p.X.HasValue &&
-                    p.Y.HasValue)
-                .ToList();
-
-        var unknownPoints =
-            _project.Points
-                .Where(p => !p.IsCoordinateFixed)
-                .ToList();
-
-        var distanceObs =
-            _project.DistanceObservations
-                .ToList();
-
-        var angleObs =
-            _project.AngleObservations
-                .ToList();
-
-
-        var parameterIndex =
-            new Dictionary<SurveyPoint, int>();
-
-        for (int i = 0; i < unknownPoints.Count; i++)
-        {
-            parameterIndex[
-                unknownPoints[i]]
-                = 2 * i;
-        }
-
-        var x0 =
-            new double[
-                unknownPoints.Count * 2];
-
-        for (int i = 0; i < unknownPoints.Count; i++)
-        {
-            var p = unknownPoints[i];
-
-            x0[2 * i]
-                = p.X
-                  ?? p.CanvasLocation.X;
-
-            x0[2 * i + 1]
-                = p.Y
-                  ?? p.CanvasLocation.Y;
-        }
- 
-        var model =
-            new AngleDistanceModel(
-                unknownPoints,
-                distanceObs,
-                angleObs,
-                parameterIndex,
-                x0);
-
-        var result =
-            NonlinearLeastSquaresSolver
-                .Solve(
-                    model,
-                    model);
-
-        var precision =
-            PrecisionEstimator
-                .Estimate(
-                    result.LS);
-
-        var sb =
-            new StringBuilder();
-
-        sb.AppendLine(
-            "边角网平差结果");
-
-        sb.AppendLine();
-
-        sb.AppendLine(
-            result.Report);
-
-        sb.AppendLine();
-
-        sb.AppendLine(
-            "未知点坐标");
-
-        for (int i = 0;
-             i < unknownPoints.Count;
-             i++)
-        {
-            sb.AppendLine(
-                $"{unknownPoints[i].Name,-4} " +
-                $"X={result.XHat[2 * i]:F4} " +
-                $"Y={result.XHat[2 * i + 1]:F4}");
-        }
-
-        sb.AppendLine();
-        sb.AppendLine(
-            precision.Report);
-
-        _resultBox.Text =
-            sb.ToString();
-
-        if (result.Success)
-        {
-            for (int i = 0;
-                 i < unknownPoints.Count;
-                 i++)
-            {
-                unknownPoints[i].X =
-                    result.XHat[2 * i];
-
-                unknownPoints[i].Y =
-                    result.XHat[2 * i + 1];
-            }
-
-            _statusLabel.Text =
-                $"边角网平差完成（迭代 {result.Iterations} 次）";
-        }
-        else
-        {
-            _statusLabel.Text =
-                "边角网平差未收敛";
-        }
-
-        RefreshProjectViews();
-
-        ShowSelectionProperties(
-            _board.SelectedObject);
-    } 
 }
 internal enum ToolMode
 {

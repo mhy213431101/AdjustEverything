@@ -219,13 +219,12 @@ internal sealed class AngleDistanceModel : IAdjustmentModel, ILinearizable
 
         double diff = f1 - f2;
 
-        // 防止跨越0°造成导数爆炸
-        if (diff > Math.PI)
+        while (diff > Math.PI)
         {
             diff -= 2.0 * Math.PI;
         }
 
-        if (diff < -Math.PI)
+        while (diff < -Math.PI)
         {
             diff += 2.0 * Math.PI;
         }

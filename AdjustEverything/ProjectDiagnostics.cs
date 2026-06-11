@@ -219,6 +219,8 @@ internal static class ProjectDiagnostics
             }
         }
 
+
+
         // 检查重名
         CheckDuplicateNames(project, result, false);
 
@@ -263,6 +265,162 @@ internal static class ProjectDiagnostics
         return result;
     }
 
+    public static ProjectValidationResult ValidateAngleDistanceNetwork(
+    AdjustmentProject project)
+    {
+        var result = new ProjectValidationResult();
+
+        var points = project.Points;
+        var distanceObs = project.DistanceObservations;
+        var angleObs = project.AngleObservations;
+
+        var fixedPoints = points
+            .Where(p =>
+                p.IsCoordinateFixed &&
+                p.X.HasValue &&
+                p.Y.HasValue)
+            .ToList();
+
+        var unknownPoints = points
+            .Where(p => !p.IsCoordinateFixed)
+            .ToList();
+
+        int t = unknownPoints.Count * 2;
+
+        int n =
+            distanceObs.Count +
+            angleObs.Count;
+
+        if (points.Count == 0)
+        {
+            result.Diagnostics.Add(
+                new ProjectDiagnostic(
+                    DiagnosticSeverity.Error,
+                    "当前项目还没有点。"));
+
+            return result;
+        }
+
+        if (distanceObs.Count == 0 &&
+            angleObs.Count == 0)
+        {
+            result.Diagnostics.Add(
+                new ProjectDiagnostic(
+                    DiagnosticSeverity.Error,
+                    "当前项目还没有距离或角度观测。"));
+
+            return result;
+        }
+
+        foreach (var point in points.Where(
+            p => p.IsCoordinateFixed &&
+            (!p.X.HasValue || !p.Y.HasValue)))
+        {
+            result.Diagnostics.Add(
+                new ProjectDiagnostic(
+                    DiagnosticSeverity.Error,
+                    $"点 {point.Name} 被设为已知平面点，但没有完整填写 X/Y。"));
+        }
+
+        if (fixedPoints.Count < 2)
+        {
+            result.Diagnostics.Add(
+                new ProjectDiagnostic(
+                    DiagnosticSeverity.Error,
+                    "边角网暂时要求至少两个已知平面坐标点作为基准。"));
+        }
+
+        if (unknownPoints.Count == 0)
+        {
+            result.Diagnostics.Add(
+                new ProjectDiagnostic(
+                    DiagnosticSeverity.Warning,
+                    "当前没有未知平面点需要平差。"));
+        }
+
+        foreach (var obs in angleObs)
+        {
+            if (obs.Sigma <= 0)
+            {
+                result.Diagnostics.Add(
+                    new ProjectDiagnostic(
+                        DiagnosticSeverity.Error,
+                        $"{obs.Name} 的中误差 σ 必须大于 0。"));
+            }
+        }
+
+        foreach (var obs in distanceObs)
+        {
+            if (obs.Value <= 0)
+            {
+                result.Diagnostics.Add(
+                    new ProjectDiagnostic(
+                        DiagnosticSeverity.Error,
+                        $"{obs.Name} 的距离 S 必须大于 0。"));
+            }
+
+            if (obs.Sigma <= 0)
+            {
+                result.Diagnostics.Add(
+                    new ProjectDiagnostic(
+                        DiagnosticSeverity.Error,
+                        $"{obs.Name} 的中误差 σ 必须大于 0。"));
+            }
+        }
+
+        CheckDuplicateNames(
+            project,
+            result,
+            true);
+
+        // 联合网连通性检查
+        var edges =
+            distanceObs
+            .Select(o => (o.From, o.To))
+            .Concat(
+                angleObs.SelectMany(o => new[]
+                {
+                (o.Vertex,o.From),
+                (o.Vertex,o.To)
+                }))
+            .ToList();
+
+        CheckConnectivity(
+            project,
+            result,
+            edges,
+            p => p.IsCoordinateFixed &&
+                 p.X.HasValue &&
+                 p.Y.HasValue,
+            p => !p.IsCoordinateFixed,
+            "边角");
+
+        int redundancy = n - t;
+
+        if (redundancy < 0)
+        {
+            result.Diagnostics.Add(
+                new ProjectDiagnostic(
+                    DiagnosticSeverity.Error,
+                    $"观测数量不足：n={n}, t={t}。"));
+        }
+        else if (redundancy == 0)
+        {
+            result.Diagnostics.Add(
+                new ProjectDiagnostic(
+                    DiagnosticSeverity.Info,
+                    "当前边角网没有多余观测，可以解算，但无法计算单位权中误差。"));
+        }
+        else
+        {
+            result.Diagnostics.Add(
+                new ProjectDiagnostic(
+                    DiagnosticSeverity.Info,
+                    $"当前多余观测数为 {redundancy}。"));
+        }
+
+        return result;
+    }
     private static void CheckDuplicateNames(AdjustmentProject project, ProjectValidationResult result, bool includeDistanceObservations)
     {
         foreach (var name in DuplicateNames(project.Points.Select(point => point.Name)))
