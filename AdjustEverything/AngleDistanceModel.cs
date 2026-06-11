@@ -229,7 +229,7 @@ internal sealed class AngleDistanceModel : IAdjustmentModel, ILinearizable
             diff += 2.0 * Math.PI;
         }
 
-        B[row, k] = (-diff / (2.0 * h)) * RHO;
+        B[row, k] = (diff / (2.0 * h)) * RHO;
     }
 
     private double AngleAtCurrentState(
