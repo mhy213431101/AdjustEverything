@@ -1155,7 +1155,6 @@ AngleObservation observation)
 
     private void RunAngleAdjustment()
     {
-        const double RadToSec = 3600 * 180 * Math.PI;
         try
         {
             var validation = ProjectDiagnostics.ValidateAngleNetwork(_project);
@@ -1214,14 +1213,14 @@ AngleObservation observation)
             }
             sb.AppendLine();
 
-            sb.AppendLine("观测改正数 v(秒)：");
+            sb.AppendLine("观测改正数 v(″)：");
 
 
             for (int i = 0; i < observations.Count; i++)
             {
                 sb.AppendLine(
                     $"{observations[i].Name,-6} " +
-                    $"{result.LS.V[i] * RadToSec:F2}");
+                    $"{result.LS.V[i]:F2}");
             }
 
             sb.AppendLine(precision.Report);

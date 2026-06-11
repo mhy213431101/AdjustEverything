@@ -1,8 +1,9 @@
 using AdjustEverything;
 
-internal sealed class AngleDistanceModel
-    : IAdjustmentModel, ILinearizable
+internal sealed class AngleDistanceModel : IAdjustmentModel, ILinearizable
 {
+    private const double RHO = 180.0 / Math.PI * 3600.0;
+
     private readonly List<SurveyPoint> _points;
     private readonly List<DistanceObservation> _distances;
     private readonly List<AngleObservation> _angles;
@@ -62,22 +63,22 @@ internal sealed class AngleDistanceModel
 
             L[row] = o.Value;
 
-            W[row] = o.Value - s;
+            W[row] = (o.Value - s) * 1000;
 
             if (_index.TryGetValue(
                 o.From,
                 out int fi))
             {
-                B[row, fi] = -dx / s;
-                B[row, fi + 1] = -dy / s;
+                B[row, fi] = (-dx / s) * 1000;
+                B[row, fi + 1] = (-dy / s) * 1000;
             }
 
             if (_index.TryGetValue(
                 o.To,
                 out int ti))
             {
-                B[row, ti] = dx / s;
-                B[row, ti + 1] = dy / s;
+                B[row, ti] = (dx / s) * 1000 ;
+                B[row, ti + 1] = (dy / s) * 1000;
             }
 
             P[row, row] =
@@ -123,7 +124,7 @@ internal sealed class AngleDistanceModel
                 w += 2.0 * Math.PI;
             }
 
-            W[row] = w;
+            W[row] = w * RHO;
 
             double h = 1e-6;
             FillDerivative(
@@ -179,15 +180,10 @@ internal sealed class AngleDistanceModel
                 h,
                 B);
 
-            double sigmaRad =
-                o.Sigma *
-                Math.PI /
-                (180.0 * 3600.0);
-
             P[row, row] =
-                sigmaRad > 0
+                o.Sigma > 0
                 ? 1.0 /
-                  (sigmaRad * sigmaRad)
+                  (o.Sigma * o.Sigma)
                 : 1.0;
 
             row++;
@@ -234,7 +230,7 @@ internal sealed class AngleDistanceModel
             diff += 2.0 * Math.PI;
         }
 
-        B[row, k] = -diff / (2.0 * h);
+        B[row, k] = (-diff / (2.0 * h)) * RHO;
     }
 
     private double AngleAtCurrentState(

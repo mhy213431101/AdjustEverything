@@ -437,42 +437,15 @@ internal sealed class DistanceObservation
     }
 }
 
-/// <summary>
-/// 角度观测
-/// ∠ABC
-/// B为测站点(Vertex)
-/// </summary>
 internal sealed class AngleObservation
 {
-    private bool _isManual = false;
-    private double _manualValue;
-    public double ValueSec => ValueRad * 3600 * 180 * Math.PI;
-
-    /// <summary>
-    /// 观测名称
-    /// </summary>
     public required string Name { get; set; }
-    /// <summary>
-    /// 后视点A
-    /// </summary>
+
     public required SurveyPoint From { get; init; }
-    /// <summary>
-    /// 测站点B
-    /// </summary>
+
     public required SurveyPoint Vertex { get; init; }
-    /// <summary>
-    /// 前视点C
-    /// </summary>
+
     public required SurveyPoint To { get; init; }
-    /// <summary>
-    /// 角度值(度)
-    /// </summary>
-    public double Value
-    {
-        get
-        {
-            if (_isManual)
-                return _manualValue;
 
     // 实测角
     public double Value { get; set; }
@@ -508,21 +481,8 @@ internal sealed class AngleObservation
             while (angle >= 360)
                 angle -= 360.0;
 
-            return Math.Acos(cos) * 180.0 / Math.PI;
+            return angle;
         }
-    }
-
-    public double Sigma { get; set; }
-
-    /// <summary>
-    /// 弧度值
-    /// </summary>
-    public double ValueRad => Value * Math.PI / 180.0;
-
-    public void SetManualValue(double value)
-    {
-        _manualValue = value;
-        _isManual = true;
     }
 
     public override string ToString()
@@ -532,5 +492,4 @@ internal sealed class AngleObservation
             $"观测={Value:F4}°  " +
             $"当前={CurrentValue:F4}°";
     }
-
 }
