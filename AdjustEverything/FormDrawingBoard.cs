@@ -616,7 +616,10 @@ AngleObservation observation)
             table,
             "前视点",
             observation.To.Name);
-
+        AddReadonlyRow(
+    table,
+    "当前角度",
+    observation.CurrentValue.ToString("F4"));
         var valueBox =
             AddTextRow(
                 table,
@@ -649,7 +652,7 @@ AngleObservation observation)
 
             observation.Name = name;
             observation.Sigma = sigma;
-            observation.SetManualValue(value);
+            observation.Value = value;
 
             RefreshProjectViews();
 
@@ -1251,7 +1254,7 @@ private void RunAngleDistanceAdjustment()
                 = p.Y
                   ?? p.CanvasLocation.Y;
         }
-
+ 
         var model =
             new AngleDistanceModel(
                 unknownPoints,

@@ -437,84 +437,59 @@ internal sealed class DistanceObservation
     }
 }
 
-/// <summary>
-/// 角度观测
-/// ∠ABC
-/// B为测站点(Vertex)
-/// </summary>
 internal sealed class AngleObservation
 {
-    private bool _isManual = false;
-    private double _manualValue;
-    /// <summary>
-    /// 观测名称
-    /// </summary>
     public required string Name { get; set; }
-    /// <summary>
-    /// 后视点A
-    /// </summary>
+
     public required SurveyPoint From { get; init; }
-    /// <summary>
-    /// 测站点B
-    /// </summary>
+
     public required SurveyPoint Vertex { get; init; }
-    /// <summary>
-    /// 前视点C
-    /// </summary>
+
     public required SurveyPoint To { get; init; }
-    /// <summary>
-    /// 角度值(度)
-    /// </summary>
-    public double Value
-    {
-        get
-        {
-            if (_isManual)
-                return _manualValue;
 
-            var bax = From.CanvasLocation.X - Vertex.CanvasLocation.X;
-            var bay = From.CanvasLocation.Y - Vertex.CanvasLocation.Y;
-
-            var bcx = To.CanvasLocation.X - Vertex.CanvasLocation.X;
-            var bcy = To.CanvasLocation.Y - Vertex.CanvasLocation.Y;
-
-            var dot = bax * bcx + bay * bcy;
-
-            var len1 = Math.Sqrt(
-                bax * bax +
-                bay * bay);
-
-            var len2 = Math.Sqrt(
-                bcx * bcx +
-                bcy * bcy);
-
-            if (len1 < 1e-6 || len2 < 1e-6)
-                return 0.0;
-
-            var cos = dot / (len1 * len2);
-
-            cos = Math.Max(-1.0, Math.Min(1.0, cos));
-
-            return Math.Acos(cos) * 180.0 / Math.PI;
-        }
-    }
+    // 实测角
+    public double Value { get; set; }
 
     public double Sigma { get; set; }
 
-    /// <summary>
-    /// 弧度值
-    /// </summary>
-    public double ValueRad => Value * Math.PI / 180.0;
+    public double ValueRad =>
+        Value * Math.PI / 180.0;
 
-    public void SetManualValue(double value)
+    // 当前坐标计算角
+    public double CurrentValue
     {
-        _manualValue = value;
-        _isManual = true;
+        get
+        {
+            double a1 =
+                Math.Atan2(
+                    From.Y!.Value - Vertex.Y!.Value,
+                    From.X!.Value - Vertex.X!.Value);
+
+            double a2 =
+                Math.Atan2(
+                    To.Y!.Value - Vertex.Y!.Value,
+                    To.X!.Value - Vertex.X!.Value);
+
+            double angle =
+                (a2 - a1) *
+                180.0 /
+                Math.PI;
+
+            while (angle < 0)
+                angle += 360.0;
+
+            while (angle >= 360)
+                angle -= 360.0;
+
+            return angle;
+        }
     }
 
     public override string ToString()
     {
-        return $"角度 {Name} = {Value:F6}°";
+        return
+            $"角度 {Name}  " +
+            $"观测={Value:F4}°  " +
+            $"当前={CurrentValue:F4}°";
     }
-
 }
