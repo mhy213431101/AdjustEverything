@@ -446,6 +446,8 @@ internal sealed class AngleObservation
 {
     private bool _isManual = false;
     private double _manualValue;
+    public double ValueSec => ValueRad * 3600 * 180 * Math.PI;
+
     /// <summary>
     /// 观测名称
     /// </summary>

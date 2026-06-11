@@ -395,7 +395,7 @@ internal static class MatrixUtility
             if (maxValue < 1e-15)
             {
                 throw new InvalidOperationException(
-                    "法矩阵奇异。");
+                    "法矩阵奇异，请检查网型！");
             }
 
             if (maxRow != pivot)

@@ -17,8 +17,8 @@ internal static class PrecisionEstimator
                 "多余观测数必须大于0。", nameof(result.r));
         }
 
-        //统一单位为mm
-        double[] Vmm = MatrixUtility.ScaMultiplyVec(result.V,1000);
+        //长度单位统一单位为mm
+        double[] Vmm = result.V;
 
         // VᵀPV
         var VPV = MatrixUtility.ComputeVPV(Vmm, result.P);
