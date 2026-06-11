@@ -23,13 +23,14 @@ internal sealed class AdjustmentProject
 
     public SurveyPoint AddPoint(string? name, PointF canvasLocation)
     {
+        var surveyLocation = SurveyCoordinateMapper.FromCanvas(canvasLocation);
         var point = new SurveyPoint
         {
             Id = Guid.NewGuid(),
             Name = string.IsNullOrWhiteSpace(name) ? NextPointName() : name.Trim(),
             CanvasLocation = canvasLocation,
-            X = canvasLocation.X,
-            Y = canvasLocation.Y,
+            X = surveyLocation.X,
+            Y = surveyLocation.Y,
         };
         Points.Add(point);
         return point;
@@ -488,7 +489,7 @@ internal sealed class AngleObservation
     {
         return
             $"角度 {Name}  " +
-            $"观测={Value:F4}°  " +
-            $"当前={CurrentValue:F4}°";
+            $"观测={AngleFormatter.ToDms(Value)}  " +
+            $"当前={AngleFormatter.ToDms(CurrentValue)}";
     }
 }

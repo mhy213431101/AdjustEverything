@@ -22,7 +22,7 @@ namespace MeasurementAdjustment
         }
 
         // ==================== 间接平差计算 ====================
-        private void BtnIndirectCalc_Click(object sender, EventArgs e)
+        private void BtnIndirectCalc_Click(object? sender, EventArgs e)
         {
             try
             {
@@ -74,7 +74,7 @@ namespace MeasurementAdjustment
         }
 
         // ==================== 条件平差计算 ====================
-        private void BtnConditionCalc_Click(object sender, EventArgs e)
+        private void BtnConditionCalc_Click(object? sender, EventArgs e)
         {
             try
             {
@@ -217,7 +217,7 @@ namespace MeasurementAdjustment
         txtParamConditionP.Text = "";   // 留空表示使用单位权
         }
         // ==================== 附有限制条件的间接平差计算 ====================
-        private void BtnConstrainedIndirectCalc_Click(object sender, EventArgs e)
+        private void BtnConstrainedIndirectCalc_Click(object? sender, EventArgs e)
         {
             try
             {

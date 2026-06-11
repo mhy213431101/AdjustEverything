@@ -108,8 +108,9 @@ internal sealed class DrawingBoard : Control
         _draggingPoint.CanvasLocation = new PointF(e.X + _dragOffset.X, e.Y + _dragOffset.Y);
         if (!_draggingPoint.IsCoordinateFixed)
         {
-            _draggingPoint.X = _draggingPoint.CanvasLocation.X;
-            _draggingPoint.Y = _draggingPoint.CanvasLocation.Y;
+            var surveyLocation = SurveyCoordinateMapper.FromCanvas(_draggingPoint.CanvasLocation);
+            _draggingPoint.X = surveyLocation.X;
+            _draggingPoint.Y = surveyLocation.Y;
         }
         ProjectChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -149,8 +150,8 @@ internal sealed class DrawingBoard : Control
             case ToolMode.AddKnownPoint:
                 SelectObject(point);
                 _project.AddKnownPoint(point);
-                point.X ??= point.CanvasLocation.X;
-                point.Y ??= point.CanvasLocation.Y;
+                point.X ??= SurveyCoordinateMapper.XFromCanvas(point.CanvasLocation);
+                point.Y ??= SurveyCoordinateMapper.YFromCanvas(point.CanvasLocation);
                 ProjectChanged?.Invoke(this, EventArgs.Empty);
                 StatusChanged?.Invoke(this, $"点 {point.Name} 已设为已知平面坐标点，可在属性面板修改 X/Y。");
                 break;
@@ -239,6 +240,11 @@ internal sealed class DrawingBoard : Control
                 StatusChanged?.Invoke(this, $"已添加距离观测 {distance.Name}，可在属性面板填写距离和中误差。");
                 break;
             case ObservationCreation.Angle:
+                if (_angleVertex is null)
+                {
+                    return;
+                }
+
                 var angle = _project.AddAngleObservation(_pendingPoint, _angleVertex, point);
                 SelectObject(angle);
                 StatusChanged?.Invoke(this, $"已添加距离观测 {angle.Name}，可在属性面板填写距离和中误差。");
