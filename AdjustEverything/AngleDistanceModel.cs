@@ -95,6 +95,7 @@ internal sealed class AngleDistanceModel
 
         foreach (var o in _angles)
         {
+           
             var A = Get(o.From, X);
             var Bp = Get(o.Vertex, X);
             var C = Get(o.To, X);
@@ -105,14 +106,24 @@ internal sealed class AngleDistanceModel
                     Bp,
                     C);
 
-            double observed =
-                o.ValueRad;
+            double observed = o.ValueRad;
 
             L[row] = observed;
 
-            W[row] =
-                observed -
-                alpha;
+            // 角度残差归化
+            double w = observed - alpha;
+
+            while (w > Math.PI)
+            {
+                w -= 2.0 * Math.PI;
+            }
+
+            while (w < -Math.PI)
+            {
+                w += 2.0 * Math.PI;
+            }
+
+            W[row] = w;
 
             double h = 1e-6;
             FillDerivative(
@@ -180,44 +191,50 @@ internal sealed class AngleDistanceModel
                 : 1.0;
 
             row++;
+            
         }
     }
 
     private void FillDerivative(
-     int row,
-     AngleObservation obs,
-     SurveyPoint point,
-     int coord,
-     double[] X,
-     double h,
-     double[,] B)
+    int row,
+    AngleObservation obs,
+    SurveyPoint point,
+    int coord,
+    double[] X,
+    double h,
+    double[,] B)
     {
-        if (!_index.TryGetValue(
-            point,
-            out int i))
+        if (!_index.TryGetValue(point, out int i))
+        {
             return;
+        }
 
         int k = i + coord;
 
-        X[k] += h;
+        double original = X[k];
 
-        double f1 =
-            AngleAtCurrentState(
-                obs,
-                X);
+        X[k] = original + h;
+        double f1 = AngleAtCurrentState(obs, X);
 
-        X[k] -= 2 * h;
+        X[k] = original - h;
+        double f2 = AngleAtCurrentState(obs, X);
 
-        double f2 =
-            AngleAtCurrentState(
-                obs,
-                X);
+        X[k] = original;
 
-        X[k] += h;
+        double diff = f1 - f2;
 
-        B[row, k] =
-            -(f1 - f2)
-            / (2.0 * h);
+        // 防止跨越0°造成导数爆炸
+        if (diff > Math.PI)
+        {
+            diff -= 2.0 * Math.PI;
+        }
+
+        if (diff < -Math.PI)
+        {
+            diff += 2.0 * Math.PI;
+        }
+
+        B[row, k] = -diff / (2.0 * h);
     }
 
     private double AngleAtCurrentState(
@@ -262,31 +279,45 @@ internal sealed class AngleDistanceModel
         PointD B,
         PointD C)
     {
+        double dx1 = A.X - B.X;
+        double dy1 = A.Y - B.Y;
+
+        double dx2 = C.X - B.X;
+        double dy2 = C.Y - B.Y;
+
+        double len1 =
+            Math.Sqrt(dx1 * dx1 + dy1 * dy1);
+
+        double len2 =
+            Math.Sqrt(dx2 * dx2 + dy2 * dy2);
+
+        if (len1 < 1e-12 ||
+            len2 < 1e-12)
+        {
+            return 0.0;
+        }
+
         double a1 =
-            Math.Atan2(
-                A.Y - B.Y,
-                A.X - B.X);
+            Math.Atan2(dy1, dx1);
 
         double a2 =
-            Math.Atan2(
-                C.Y - B.Y,
-                C.X - B.X);
+            Math.Atan2(dy2, dx2);
 
         double angle =
             a2 - a1;
 
         while (angle < 0)
-            angle +=
-                2 * Math.PI;
+        {
+            angle += 2.0 * Math.PI;
+        }
 
-        while (angle >=
-               2 * Math.PI)
-            angle -=
-                2 * Math.PI;
+        while (angle >= 2.0 * Math.PI)
+        {
+            angle -= 2.0 * Math.PI;
+        }
 
         return angle;
     }
-
     internal readonly record struct PointD(
         double X,
         double Y);

@@ -474,28 +474,39 @@ internal sealed class AngleObservation
             if (_isManual)
                 return _manualValue;
 
-            var bax = From.CanvasLocation.X - Vertex.CanvasLocation.X;
-            var bay = From.CanvasLocation.Y - Vertex.CanvasLocation.Y;
+    // 实测角
+    public double Value { get; set; }
 
-            var bcx = To.CanvasLocation.X - Vertex.CanvasLocation.X;
-            var bcy = To.CanvasLocation.Y - Vertex.CanvasLocation.Y;
+    public double Sigma { get; set; }
 
-            var dot = bax * bcx + bay * bcy;
+    public double ValueRad =>
+        Value * Math.PI / 180.0;
 
-            var len1 = Math.Sqrt(
-                bax * bax +
-                bay * bay);
+    // 当前坐标计算角
+    public double CurrentValue
+    {
+        get
+        {
+            double a1 =
+                Math.Atan2(
+                    From.Y!.Value - Vertex.Y!.Value,
+                    From.X!.Value - Vertex.X!.Value);
 
-            var len2 = Math.Sqrt(
-                bcx * bcx +
-                bcy * bcy);
+            double a2 =
+                Math.Atan2(
+                    To.Y!.Value - Vertex.Y!.Value,
+                    To.X!.Value - Vertex.X!.Value);
 
-            if (len1 < 1e-6 || len2 < 1e-6)
-                return 0.0;
+            double angle =
+                (a2 - a1) *
+                180.0 /
+                Math.PI;
 
-            var cos = dot / (len1 * len2);
+            while (angle < 0)
+                angle += 360.0;
 
-            cos = Math.Max(-1.0, Math.Min(1.0, cos));
+            while (angle >= 360)
+                angle -= 360.0;
 
             return Math.Acos(cos) * 180.0 / Math.PI;
         }
@@ -516,7 +527,10 @@ internal sealed class AngleObservation
 
     public override string ToString()
     {
-        return $"角度 {Name} = {Value:F6}°";
+        return
+            $"角度 {Name}  " +
+            $"观测={Value:F4}°  " +
+            $"当前={CurrentValue:F4}°";
     }
 
 }
