@@ -51,14 +51,14 @@ internal static class PrecisionEstimator
         var report = new StringBuilder();
 
         report.AppendLine();
-        report.AppendLine("平差精度评定：");
+        report.AppendLine("平差精度评定【长度单位:毫米（mm），角度单位：秒（″）】：");
 
         report.AppendLine();
-        report.AppendLine($"单位权方差 σ0² = {sigma0_Sq:F6} mm²");
-        report.AppendLine($"单位权中误差 σ0 = {sigma0:F6} mm");
+        report.AppendLine($"单位权方差 σ0² = {sigma0_Sq:F6}");
+        report.AppendLine($"单位权中误差 σ0 = {sigma0:F6}");
 
         report.AppendLine();
-        report.AppendLine("观测值残差协方差阵 DVV（mm²）：");
+        report.AppendLine("观测值残差协方差阵 DVV：");
         for (int i = 0; i < result.n; i++)
         {
             var row = new System.Text.StringBuilder();
@@ -70,7 +70,7 @@ internal static class PrecisionEstimator
         }
 
         report.AppendLine();
-        report.AppendLine("观测值平差值协方差阵 DLL（mm²）：");
+        report.AppendLine("观测值平差值协方差阵 DLL：");
         for (int i = 0; i < result.n; i++)
         {
             var row = new System.Text.StringBuilder();
@@ -82,7 +82,7 @@ internal static class PrecisionEstimator
         }
 
         report.AppendLine();
-        report.AppendLine("参数协方差阵 DXX（mm²）：");
+        report.AppendLine("参数协方差阵 DXX：");
         for (int i = 0; i < result.t; i++)
         {
             var row = new System.Text.StringBuilder();
@@ -94,7 +94,7 @@ internal static class PrecisionEstimator
         }
 
         report.AppendLine();
-        report.AppendLine("参数与观测值平差值协方差阵 DXL（mm²）：");
+        report.AppendLine("参数与观测值平差值协方差阵 DXL：");
         for (int i = 0; i < result.t; i++)
         {
             var row = new System.Text.StringBuilder();
