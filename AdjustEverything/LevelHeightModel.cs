@@ -18,6 +18,8 @@ internal sealed class LevelHeightModel :
 
     public int t => _unknownPoints.Count;
 
+    public int separate => 0;
+
     public double[] X0 { get; }
 
     public LevelHeightModel(
@@ -59,7 +61,7 @@ internal sealed class LevelHeightModel :
 
             L[k] = obs.Value;
 
-            W[k] = (obs.Value - known - approx) * 1000;
+            W[k] = (obs.Value - known - approx);
 
             double p = obs.Sigma > 0
                 ? 1.0 / (obs.Sigma * obs.Sigma * S[k])
@@ -68,13 +70,13 @@ internal sealed class LevelHeightModel :
             P[k, k] = p;
 
             _report.AppendLine(
-                $"{obs.Name,-6} L={obs.Value:F4} f={(known + approx):F4} v={W[k]:F4}");
+                $"{obs.Name,-6} L={obs.Value:F3} f={(known + approx):F3} v={W[k]:F3}");
 
             void Add(SurveyPoint pt, double c)
             {
                 if (_index.TryGetValue(pt, out int j))
                 {
-                    B[k, j] += c * 1000;
+                    B[k, j] += c;
                     approx += c * X[j];
                     return;
                 }

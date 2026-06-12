@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 namespace AdjustEverything;
 
@@ -12,6 +13,8 @@ public partial class FormDrawingBoard : Form
     private readonly Panel _propertyPanel = new();
     private readonly Label _statusLabel = new();
     private bool _syncingObjectList;
+
+    private const double RHO = 180.0 / Math.PI * 3600.0;
 
     public FormDrawingBoard()
     {
@@ -60,8 +63,7 @@ public partial class FormDrawingBoard : Form
         };
 
         BuildLayout();
-        LoadSampleNetwork();
-        SetMode(ToolMode.AddPoint);
+        SetMode(ToolMode.Select);
     }
 
     private void BuildLayout()
@@ -73,7 +75,7 @@ public partial class FormDrawingBoard : Form
             Dock = DockStyle.Fill,
             ColumnCount = 2,
             RowCount = 1,
-            Padding = new Padding(14),
+            Padding = new Padding(28),
             BackColor = Color.FromArgb(224, 229, 229),
         };
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 240));
@@ -105,6 +107,7 @@ public partial class FormDrawingBoard : Form
         top.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 38));
         workArea.Controls.Add(top, 0, 0);
 
+        
         top.Controls.Add(BuildGroup("已添加对象", _objectList), 0, 0);
         top.Controls.Add(BuildGroup("属性", _propertyPanel), 1, 0);
 
@@ -119,7 +122,7 @@ public partial class FormDrawingBoard : Form
         var boardPanel = new Panel
         {
             Dock = DockStyle.Fill,
-            Padding = new Padding(12, 0, 0, 0),
+            Padding = new Padding(14, 0, 0, 0),
         };
         workArea.Controls.Add(boardPanel, 0, 1);
 
@@ -143,18 +146,9 @@ public partial class FormDrawingBoard : Form
             AutoSize = false,
             TextAlign = ContentAlignment.MiddleLeft,
             Width = 140,
-            Padding = new Padding(12, 0, 0, 0),
+            Padding = new Padding(14, 0, 0, 0),
             Font = new Font(Font, FontStyle.Bold),
         };
-
-        var distanceCalculate = new Button
-        {
-            Text = "▷ 测边网平差",
-            Dock = DockStyle.Right,
-            Width = 150,
-            FlatStyle = FlatStyle.Flat,
-        };
-        distanceCalculate.Click += (_, _) => RunDistanceAdjustment();
 
         var heightCalculate = new Button
         {
@@ -164,6 +158,15 @@ public partial class FormDrawingBoard : Form
             FlatStyle = FlatStyle.Flat,
         };
         heightCalculate.Click += (_, _) => RunHeightAdjustment();
+
+        var distanceCalculate = new Button
+        {
+            Text = "▷ 测边网平差",
+            Dock = DockStyle.Right,
+            Width = 150,
+            FlatStyle = FlatStyle.Flat,
+        };
+        distanceCalculate.Click += (_, _) => RunDistanceAdjustment();
 
         var angleCalculate = new Button
         {
@@ -205,7 +208,7 @@ public partial class FormDrawingBoard : Form
             ColumnCount = 1,
             BackColor = Color.White,
             CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
-            Padding = new Padding(12),
+            Padding = new Padding(8),
             AutoScroll = true,
         };
 
@@ -215,19 +218,27 @@ public partial class FormDrawingBoard : Form
         AddToolButton(panel, "━ 添加基线", ToolMode.AddBaseLine);
         AddToolButton(panel, "○ 添加点", ToolMode.AddPoint);
         AddToolButton(panel, "─ 添加线", ToolMode.AddLine);
-        AddToolButton(panel, "∠β 添加角度观测", ToolMode.AddAngle);
+        AddToolButton(panel, "∠β添加角度观测", ToolMode.AddAngle);
         AddToolButton(panel, "↔ 添加距离观测", ToolMode.AddDistance);
         AddToolButton(panel, "↕ 添加高差观测", ToolMode.AddHeight);
 
-        var sample = BuildSideButton("载入示例网");
-        sample.Click += (_, _) =>
+        var levelheightsample = BuildSideButton("载入水准网示例");
+        levelheightsample.Click += (_, _) =>
         {
-            LoadSampleNetwork();
+            LoadLevelHeightSampleNetwork();
             SetMode(ToolMode.AddPoint);
         };
-        panel.Controls.Add(sample);
+        panel.Controls.Add(levelheightsample);
 
-        var angleSample = BuildSideButton("载入测角示例");
+        var distancesample = BuildSideButton("载入测边网示例");
+        distancesample.Click += (_, _) =>
+        {
+            LoadDistanceSampleNetwork();
+            SetMode(ToolMode.AddPoint);
+        };
+        panel.Controls.Add(distancesample);
+
+        var angleSample = BuildSideButton("载入测角网示例");
         angleSample.Click += (_, _) =>
         {
             LoadAngleSampleNetwork();
@@ -235,7 +246,7 @@ public partial class FormDrawingBoard : Form
         };
         panel.Controls.Add(angleSample);
 
-        var angleDistanceSample = BuildSideButton("载入边角示例");
+        var angleDistanceSample = BuildSideButton("载入边角网示例");
         angleDistanceSample.Click += (_, _) =>
         {
             LoadAngleDistanceSampleNetwork();
@@ -466,33 +477,20 @@ public partial class FormDrawingBoard : Form
         }
     }
 
-    private void LoadSampleNetwork()
+    private void LoadLevelHeightSampleNetwork()
     {
         _project.Clear();
 
-        var (a, b, c, d) = CreateSamplePoints();
+        ProjectFileService.Load("LevelHeightSample.aep.json", _project);
+        
+        ResetBoardAfterLoadingSample();
+    }
 
-        a.IsHeightFixed = true;
-        a.Height = 100.000;
-        b.IsHeightFixed = true;
-        b.Height = 101.230;
-        c.Height = 101.180;
-        d.Height = 100.420;
+    private void LoadDistanceSampleNetwork()
+    {
+        _project.Clear();
 
-        _project.AddKnownPoint(a);
-        _project.AddKnownPoint(b);
-
-        AddSampleHeightObservation(a, c, 1.181);
-        AddSampleHeightObservation(a, d, 0.418);
-        AddSampleHeightObservation(d, c, 0.759);
-        AddSampleHeightObservation(c, b, 0.047);
-        AddSampleHeightObservation(d, b, 0.812);
-
-        AddSampleDistanceObservation(a, c, 0.012);
-        AddSampleDistanceObservation(c, b, -0.008);
-        AddSampleDistanceObservation(a, d, 0.010);
-        AddSampleDistanceObservation(d, b, -0.006);
-        AddSampleDistanceObservation(c, d, 0.015);
+        ProjectFileService.Load("DistanceSample.aep.json", _project);
 
         ResetBoardAfterLoadingSample();
     }
@@ -501,17 +499,7 @@ public partial class FormDrawingBoard : Form
     {
         _project.Clear();
 
-        var (a, b, c, d) = CreateSamplePoints();
-
-        _project.AddKnownPoint(a);
-        _project.AddKnownPoint(b);
-
-        AddSampleAngleObservation(b, c, a, 2.5);
-        AddSampleAngleObservation(a, d, b, -1.6);
-        AddSampleAngleObservation(c, a, d, 1.2);
-        AddSampleAngleObservation(d, b, c, -2.0);
-        AddSampleAngleObservation(d, c, a, 1.0);
-        AddSampleAngleObservation(c, d, b, -1.4);
+        ProjectFileService.Load("AngleSample.aep.json", _project);
 
         ResetBoardAfterLoadingSample();
     }
@@ -520,72 +508,9 @@ public partial class FormDrawingBoard : Form
     {
         _project.Clear();
 
-        var (a, b, c, d) = CreateSamplePoints();
-
-        _project.AddKnownPoint(a);
-        _project.AddKnownPoint(b);
-
-        AddSampleDistanceObservation(a, c, 0.012);
-        AddSampleDistanceObservation(c, b, -0.008);
-        AddSampleDistanceObservation(a, d, 0.010);
-        AddSampleDistanceObservation(d, b, -0.006);
-        AddSampleDistanceObservation(c, d, 0.015);
-
-        AddSampleAngleObservation(b, c, a, 2.5);
-        AddSampleAngleObservation(a, d, b, -1.6);
-        AddSampleAngleObservation(c, a, d, 1.2);
-        AddSampleAngleObservation(d, b, c, -2.0);
+        ProjectFileService.Load("AngleDistanceSample.aep.json", _project);
 
         ResetBoardAfterLoadingSample();
-    }
-
-    private (SurveyPoint A, SurveyPoint B, SurveyPoint C, SurveyPoint D) CreateSamplePoints()
-    {
-        var a = AddSamplePoint("A", 0.000, 0.000);
-        var b = AddSamplePoint("B", 0.000, 300.000);
-        var c = AddSamplePoint("C", 100.000, 157.692);
-        var d = AddSamplePoint("D", -107.692, 130.769);
-
-        return (a, b, c, d);
-    }
-
-    private SurveyPoint AddSamplePoint(string name, double x, double y)
-    {
-        const double scale = 1.3;
-        var canvasLocation = new PointF(
-            (float)(250.0 + y * scale),
-            (float)(250.0 - x * scale));
-
-        var point = _project.AddPoint(name, canvasLocation);
-        point.X = x;
-        point.Y = y;
-        return point;
-    }
-
-    private void AddSampleHeightObservation(SurveyPoint from, SurveyPoint to, double value)
-    {
-        var observation = _project.AddHeightObservation(from, to, value, SampleDistance(from, to) / 1000.0);
-        observation.Sigma = 0.004;
-    }
-
-    private void AddSampleDistanceObservation(SurveyPoint from, SurveyPoint to, double error)
-    {
-        var observation = _project.AddDistanceObservation(from, to, SampleDistance(from, to) + error);
-        observation.Sigma = 0.010;
-    }
-
-    private void AddSampleAngleObservation(SurveyPoint from, SurveyPoint vertex, SurveyPoint to, double errorSeconds)
-    {
-        var observation = _project.AddAngleObservation(from, vertex, to);
-        observation.Value = NormalizeDegrees(observation.CurrentValue + errorSeconds / 3600.0);
-        observation.Sigma = 2.0;
-    }
-
-    private static double SampleDistance(SurveyPoint from, SurveyPoint to)
-    {
-        var dx = to.X!.Value - from.X!.Value;
-        var dy = to.Y!.Value - from.Y!.Value;
-        return Math.Sqrt(dx * dx + dy * dy);
     }
 
     private static double NormalizeDegrees(double degrees)
@@ -837,46 +762,21 @@ public partial class FormDrawingBoard : Form
         _propertyPanel.Controls.Add(table);
     }
 
-    private void BuildAngleObservationProperties(
-AngleObservation observation)
+    private void BuildAngleObservationProperties(AngleObservation observation)
     {
         var table = BuildPropertyTable();
 
-        var nameBox =
-            AddTextRow(
-                table,
-                "观测名",
-                observation.Name);
+        var nameBox =AddTextRow(table, "观测名", observation.Name);
 
-        AddReadonlyRow(
-            table,
-            "后视点",
-            observation.From.Name);
+        AddReadonlyRow(table, "后视点", observation.From.Name);
 
-        AddReadonlyRow(
-            table,
-            "测站点",
-            observation.Vertex.Name);
+        AddReadonlyRow(table, "测站点", observation.Vertex.Name);
 
-        AddReadonlyRow(
-            table,
-            "前视点",
-            observation.To.Name);
-        AddReadonlyRow(
-    table,
-    "当前角度",
-    AngleFormatter.ToDms(observation.CurrentValue));
-        var valueBox =
-            AddTextRow(
-                table,
-                "角度值 dd°mm'ss\"",
-                AngleFormatter.ToDms(observation.Value));
+        AddReadonlyRow(table, "前视点", observation.To.Name);
+        
+        var valueBox =AddTextRow(table, "角度值 dd°mm'ss\"", AngleFormatter.ToDms(observation.Value));
 
-        var sigmaBox =
-            AddTextRow(
-                table,
-                "中误差σ",
-                observation.Sigma.ToString("F4"));
+        var sigmaBox = AddTextRow(table, "中误差σ", observation.Sigma.ToString("F3"));
 
         var apply = AddApplyButton(table);
 
@@ -894,6 +794,8 @@ AngleObservation observation)
             {
                 return;
             }
+
+            value = NormalizeDegrees(value);
 
             observation.Name = name;
             observation.Sigma = sigma;
@@ -1163,12 +1065,11 @@ AngleObservation observation)
                 .Select((p, i) => (p, i))
                 .ToDictionary(x => x.p, x => x.i);
 
-            var X0 = new double[unknownPoints.Count];
-
-            for (int i = 0; i < unknownPoints.Count; i++)
-            {
-                X0[i] = unknownPoints[i].Height ?? 0.0;
-            }
+            var X0 =
+                ApproximateHeightBuilder.BuildX0(
+                    _project.Points,
+                    unknownPoints,
+                    observations);
 
             //2. 导入模型
             var model = new LevelHeightModel(
@@ -1181,7 +1082,7 @@ AngleObservation observation)
             var result = NonlinearLeastSquaresSolver.Solve(model, model);
 
             //4. 精度评定
-            var precision = PrecisionEstimator.Estimate(result.LS);
+            var precision = PrecisionEstimator.Estimate(result, PrecisionEstimator.NetType.LevelHeight);
 
             //5. 报告生成
             var sb = new StringBuilder();
@@ -1230,7 +1131,7 @@ AngleObservation observation)
             {
                 sb.AppendLine(
                     $"{observations[i].Name,-4}  " +
-                    $"{result.LS.V[i]:F1}");
+                    $"{1000 * result.LS.V[i]:F1}");
             }
 
             sb.AppendLine(precision.Report);
@@ -1336,7 +1237,7 @@ AngleObservation observation)
                 }
             }
 
-            var precision = PrecisionEstimator.Estimate(result.LS);
+            var precision = PrecisionEstimator.Estimate(result, PrecisionEstimator.NetType.Distance);
 
             var sb = new StringBuilder();
 
@@ -1392,7 +1293,7 @@ AngleObservation observation)
             {
                 sb.AppendLine(
                     $"{observations[i].Name,-6} " +
-                    $"{v[i]:F1}");
+                    $"{1000 * v[i]:F1}");
             }
 
             sb.AppendLine(precision.Report);
@@ -1461,7 +1362,7 @@ AngleObservation observation)
             var result = NonlinearLeastSquaresSolver.Solve(model, model);
 
             // 精度评定
-            var precision = PrecisionEstimator.Estimate(result.LS);
+            var precision = PrecisionEstimator.Estimate(result, PrecisionEstimator.NetType.Angle);
 
             var sb = new System.Text.StringBuilder();
 
@@ -1498,7 +1399,7 @@ AngleObservation observation)
             {
                 sb.AppendLine(
                     $"{observations[i].Name,-6} " +
-                    $"{result.LS.V[i]:F2}");
+                    $"{RHO * result.LS.V[i]:F2}");
             }
 
             sb.AppendLine(precision.Report);
@@ -1598,16 +1499,9 @@ AngleObservation observation)
                     parameterIndex,
                     x0);
 
-            var result =
-                NonlinearLeastSquaresSolver
-                    .Solve(
-                        model,
-                        model);
+            var result = NonlinearLeastSquaresSolver.Solve(model, model);
 
-            var precision =
-                PrecisionEstimator
-                    .Estimate(
-                        result.LS);
+            var precision = PrecisionEstimator.Estimate(result, PrecisionEstimator.NetType.AngleDistance);
 
             var sb = new System.Text.StringBuilder();
 
@@ -1639,13 +1533,13 @@ AngleObservation observation)
             }
             sb.AppendLine();
 
-            sb.AppendLine("观测改正数 v：距离为 mm，角度为 ″");
+            sb.AppendLine("观测改正数 v：距离(mm)，角度(″)");
 
             for (int i = 0; i < distanceObs.Count; i++)
             {
                 sb.AppendLine(
                     $"{distanceObs[i].Name,-6} " +
-                    $"{result.LS.V[i]:F2} mm");
+                    $"{1000 * result.LS.V[i]:F2} mm");
             }
 
             for (int i = 0; i < angleObs.Count; i++)
@@ -1653,7 +1547,7 @@ AngleObservation observation)
                 var row = distanceObs.Count + i;
                 sb.AppendLine(
                     $"{angleObs[i].Name,-6} " +
-                    $"{result.LS.V[row]:F2} ″");
+                    $"{RHO * result.LS.V[row]:F2} ″");
             }
 
 

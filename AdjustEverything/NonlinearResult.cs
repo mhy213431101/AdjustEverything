@@ -12,6 +12,8 @@ internal sealed class NonlinearResult
 
     public double[] XHat { get; set; } = [];
 
+    public int Separate { get; set; }
+
     public LeastSquaresResult LS { get; set; } = default!;
 
     public string Report { get; set; } = "";

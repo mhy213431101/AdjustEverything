@@ -17,6 +17,7 @@ internal static class NonlinearLeastSquaresSolver
     {
         int n = model.n;
         int t = model.t;
+        int sep = model.separate;
 
         double[] X = (double[])model.X0.Clone();
 
@@ -77,6 +78,7 @@ internal static class NonlinearLeastSquaresSolver
         {
             Success = false,
             XHat = X,
+            Separate = sep,
             Iterations = MaxIterations,
             LS = last,
             Report = report.ToString()

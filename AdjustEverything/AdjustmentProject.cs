@@ -156,7 +156,7 @@ internal sealed class AdjustmentProject
         var observation =
             new AngleObservation
             {
-                Name = $"a{_angleSerial++}",
+                Name = $"β{_angleSerial++}",
 
                 From = from,
 
@@ -488,8 +488,10 @@ internal sealed class AngleObservation
     public override string ToString()
     {
         return
-            $"角度 {Name}  " +
-            $"观测={AngleFormatter.ToDms(Value)}  " +
-            $"当前={AngleFormatter.ToDms(CurrentValue)}";
+            $"角度 {Name}  " + 
+            $"{From}" +
+            $"{Vertex}" +
+            $"{To}" +
+            $" β={AngleFormatter.ToDms(Value)}  ";
     }
 }

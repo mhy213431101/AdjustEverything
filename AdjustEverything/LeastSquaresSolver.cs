@@ -72,7 +72,6 @@ internal static class LeastSquaresSolver
 
             W = l
 
-
         };
     }
 }

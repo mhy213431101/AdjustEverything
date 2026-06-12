@@ -16,6 +16,9 @@ internal sealed class DistanceModel : IAdjustmentModel, ILinearizable
 
     public int t => _index.Count * 2;
 
+    public int separate => 0;
+
+
     public double[] X0 { get; init; } = [];
 
     private readonly StringBuilder _report = new();
@@ -54,23 +57,23 @@ internal sealed class DistanceModel : IAdjustmentModel, ILinearizable
             double s = Math.Sqrt(dx * dx + dy * dy);
             if (s < 1e-12) s = 1e-12;
 
-            L[i] = (o.Value) * 1000;
+            L[i] = (o.Value);
 
             double f = s;
 
-            W[i] = (o.Value - f) * 1000;
+            W[i] = (o.Value - f);
 
 
             if (_index.TryGetValue(o.From, out int fi))
             {
-                B[i, fi] = (-dx / s) * 1000;
-                B[i, fi + 1] = (-dy / s) * 1000;
+                B[i, fi] = (-dx / s);
+                B[i, fi + 1] = (-dy / s);
             }
 
             if (_index.TryGetValue(o.To, out int ti))
             {
-                B[i, ti] = (dx / s) * 1000;
-                B[i, ti + 1] = (dy / s) * 1000;
+                B[i, ti] = (dx / s);
+                B[i, ti + 1] = (dy / s);
             }
 
             double p = o.Sigma > 0 ? 1.0 / (o.Sigma * o.Sigma) : 1.0;

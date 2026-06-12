@@ -2,45 +2,55 @@
 /// 平差结果精度评定
 /// 计算单位权方差以及协方差阵等，生成精度评定报告
 /// </summary>
-//
+using System.Net.NetworkInformation;
 using System.Text;
 
 namespace AdjustEverything;
 
 internal static class PrecisionEstimator
 {
-    public static PrecisionResult Estimate(LeastSquaresResult result)
-    {       
-        if (result.r <= 0)
+    private const double RHO = 180.0 / Math.PI * 3600.0;
+
+    public enum NetType
+    {
+        LevelHeight,
+        Distance,
+        Angle,
+        AngleDistance
+    }
+
+    public static PrecisionResult Estimate(NonlinearResult result, NetType type)
+    {
+        if (result.LS.r <= 0)
         {
             throw new ArgumentException(
-                "多余观测数必须大于0。", nameof(result.r));
+                "多余观测数必须大于0。", nameof(result.LS.r));
         }
 
-        //长度单位统一单位为mm
-        double[] Vmm = result.V;
+        // 缩放残差和设计矩阵
+        var scaled = ScaleResiduals(result, type);
 
         // VᵀPV
-        var VPV = MatrixUtility.ComputeVPV(Vmm, result.P);
+        var VPV = MatrixUtility.ComputeVPV(scaled.V, result.LS.P);
 
         // 单位权方差 σ₀² = VᵀPV / r
-        double sigma0_Sq = VPV / result.r;
+        double sigma0_Sq = VPV / result.LS.r;
 
         // 单位权中误差 σ₀
         double sigma0 = Math.Sqrt(sigma0_Sq);
 
         //协因数阵
-        // QXX = N⁻¹
-        var Qxx = MatrixUtility.Inverse(result.N);
+        // Qxx = Bᵀ ·P·B
+        double[,] Qxx = ComputeQxx(scaled.B, result.LS.P);
 
         // QLL = B · Qxx · Bᵀ
-        double[,] Qll = ComputeQll(result.B, Qxx);
-        
+        double[,] Qll = ComputeQll(scaled.B, Qxx);
+
         // QVV = P⁻¹ - QLL
-        double[,] Qvv = ComputeQvv(result.P, Qll);
+        double[,] Qvv = ComputeQvv(result.LS.P, Qll);
 
         // QXL = Qxx · Bᵀ
-        double[,] Qxl = ComputeQxl(Qxx, result.B);
+        double[,] Qxl = ComputeQxl(Qxx, scaled.B);
 
         // 协方差阵
         double[,] Dxx = ComputeCovarianceMatrix(sigma0_Sq, Qxx);
@@ -59,10 +69,10 @@ internal static class PrecisionEstimator
 
         report.AppendLine();
         report.AppendLine("观测值残差协方差阵 DVV：");
-        for (int i = 0; i < result.n; i++)
+        for (int i = 0; i < result.LS.n; i++)
         {
-            var row = new System.Text.StringBuilder();
-            for (int j = 0; j < result.n; j++)
+            var row = new StringBuilder();
+            for (int j = 0; j < result.LS.n; j++)
             {
                 row.Append($"{Dvv[i, j],8:F4} ");
             }
@@ -71,10 +81,10 @@ internal static class PrecisionEstimator
 
         report.AppendLine();
         report.AppendLine("观测值平差值协方差阵 DLL：");
-        for (int i = 0; i < result.n; i++)
+        for (int i = 0; i < result.LS.n; i++)
         {
-            var row = new System.Text.StringBuilder();
-            for (int j = 0; j < result.n; j++)
+            var row = new StringBuilder();
+            for (int j = 0; j < result.LS.n; j++)
             {
                 row.Append($"{Dll[i, j],8:F4} ");
             }
@@ -83,10 +93,10 @@ internal static class PrecisionEstimator
 
         report.AppendLine();
         report.AppendLine("参数协方差阵 DXX：");
-        for (int i = 0; i < result.t; i++)
+        for (int i = 0; i < result.LS.t; i++)
         {
-            var row = new System.Text.StringBuilder();
-            for (int j = 0; j < result.t; j++)
+            var row = new StringBuilder();
+            for (int j = 0; j < result.LS.t; j++)
             {
                 row.Append($"{Dxx[i, j],8:F4} ");
             }
@@ -95,10 +105,10 @@ internal static class PrecisionEstimator
 
         report.AppendLine();
         report.AppendLine("参数与观测值平差值协方差阵 DXL：");
-        for (int i = 0; i < result.t; i++)
+        for (int i = 0; i < result.LS.t; i++)
         {
-            var row = new System.Text.StringBuilder();
-            for (int j = 0; j < result.n; j++)
+            var row = new StringBuilder();
+            for (int j = 0; j < result.LS.n; j++)
             {
                 row.Append($"{Dxl[i, j],8:F4} ");
             }
@@ -109,11 +119,11 @@ internal static class PrecisionEstimator
         {
             Report = report.ToString(),
             Sigma0_Sq = sigma0_Sq,
-            Sigma0 = sigma0,            
+            Sigma0 = sigma0,
             Qvv = Qvv,
             Qll = Qll,
             Qxx = Qxx,
-            Qxl = Qxl,           
+            Qxl = Qxl,
             Dvv = Dvv,
             Dll = Dll,
             Dxx = Dxx,
@@ -121,7 +131,68 @@ internal static class PrecisionEstimator
         };
     }
 
+    #region 缩放
+    private static ScaledResiduals ScaleResiduals(NonlinearResult result, NetType type)
+    {
+        int n = result.LS.n;
+        int t = result.LS.t;
+
+        var scaled = new ScaledResiduals
+        {
+            V = new double[n],
+            B = new double[n, t]
+        };
+
+        if (type == NetType.LevelHeight || type == NetType.Distance)
+        {
+            scaled.V = MatrixUtility.ScaMultiplyVec(result.LS.V, 1000);
+            scaled.B = MatrixUtility.MultiplyScalar(result.LS.B, 1);
+        }
+        else if (type == NetType.Angle)
+        {
+            scaled.V = MatrixUtility.ScaMultiplyVec(result.LS.V, RHO);
+            scaled.B = MatrixUtility.MultiplyScalar(result.LS.B, 1);
+        }
+        else if (type == NetType.AngleDistance)
+        {
+            for (int i = 0; i < result.Separate; i++)
+            {
+                scaled.V[i] = result.LS.V[i] * 1000;
+                double scaledValue = result.LS.V[i] * 1000;
+                for (int j = 0; j < t; j++)
+                {
+                    scaled.B[i, j] = result.LS.B[i, j] * 1;
+                }
+            }
+
+            for (int i = result.Separate; i < n; i++)
+            {
+                scaled.V[i] = result.LS.V[i] * RHO;
+                double scaledValue = result.LS.V[i] * RHO;
+                for (int j = 0; j < t; j++)
+                {
+                    scaled.B[i, j] = result.LS.B[i, j] * 1;
+                }
+            }
+        }
+
+        return scaled;
+    }
+    #endregion
+
     #region 协因数阵计算
+    private static double[,] ComputeQxx(
+        double[,] B, double[,] P)
+    {
+        double[,] Bt = MatrixUtility.Transpose(B);
+        double[,] BtP = MatrixUtility.Multiply(Bt, P);
+
+        // N = Bᵀ · P · B
+        double[,] N = MatrixUtility.Multiply(BtP, B);
+
+        // Qxx = N⁻¹
+        return MatrixUtility.Inverse(N);
+    }
 
     private static double[,] ComputeQll(
         double[,] B,
@@ -156,17 +227,19 @@ internal static class PrecisionEstimator
         // QXL = Qxx · Bᵀ
         return MatrixUtility.Multiply(Qxx, Bt);
     }
-
     #endregion
 
     #region 协方差阵计算
-
     private static double[,] ComputeCovarianceMatrix(
         double sigma0_Sq,
         double[,] Q)
     {
         return MatrixUtility.MultiplyScalar(Q, sigma0_Sq);
     }
-
     #endregion
+}
+public class ScaledResiduals
+{
+    public required double[] V { get; set; }
+    public required double[,] B { get; set; }
 }

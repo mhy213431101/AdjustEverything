@@ -7,11 +7,8 @@ using System.Threading.Tasks;
 
 namespace AdjustEverything
 {
-
     internal class AngleModel : IAdjustmentModel, ILinearizable
     {
-        private const double RHO = 180.0 / Math.PI * 3600.0;
-
         private readonly List<AngleObservation> _observations;
         private readonly List<SurveyPoint> _unknownPoints;
         private readonly Dictionary<SurveyPoint, int> _paramIndex;
@@ -29,6 +26,8 @@ namespace AdjustEverything
 
         public int n => _observations.Count;
         public int t => _unknownPoints.Count * 2;
+        public int separate => 0;
+
         public double[] X0 { get; }
 
         /// <summary>
@@ -61,7 +60,7 @@ namespace AdjustEverything
                 // 误差方程
 
                 L[i] = obs.ValueRad;                 // 观测值弧度
-                W[i] =(NormalizeAngle(obs.ValueRad - computedAngleRad)) * RHO;
+                W[i] =(NormalizeAngle(obs.ValueRad - computedAngleRad));
                 P[i, i] = 1.0 /(obs.Sigma * obs.Sigma);
 
                 // 雅可比矩阵
@@ -101,7 +100,7 @@ namespace AdjustEverything
                 var a1 = ComputeAngle(GetPoint(obs.From, X1), GetPoint(obs.Vertex, X1), GetPoint(obs.To, X1));
                 var a2 = ComputeAngle(GetPoint(obs.From, X2), GetPoint(obs.Vertex, X2), GetPoint(obs.To, X2));
 
-                B[row, k] = ((a1 - a2) / (2 * eps)) * RHO; // 雅可比单位为弧度
+                B[row, k] = ((a1 - a2) / (2 * eps)); // 雅可比单位为弧度
             }
         }
     }
