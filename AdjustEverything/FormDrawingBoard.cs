@@ -481,7 +481,7 @@ public partial class FormDrawingBoard : Form
     {
         _project.Clear();
 
-        ProjectFileService.Load("LevelHeightSample.aep.json", _project);
+        ProjectFileService.Load("sampleNet/LevelHeightSample.aep.json", _project);
         
         ResetBoardAfterLoadingSample();
     }
@@ -490,7 +490,7 @@ public partial class FormDrawingBoard : Form
     {
         _project.Clear();
 
-        ProjectFileService.Load("DistanceSample.aep.json", _project);
+        ProjectFileService.Load("sampleNet/DistanceSample.aep.json", _project);
 
         ResetBoardAfterLoadingSample();
     }
@@ -499,7 +499,7 @@ public partial class FormDrawingBoard : Form
     {
         _project.Clear();
 
-        ProjectFileService.Load("AngleSample.aep.json", _project);
+        ProjectFileService.Load("sampleNet/AngleSample.aep.json", _project);
 
         ResetBoardAfterLoadingSample();
     }
@@ -508,7 +508,7 @@ public partial class FormDrawingBoard : Form
     {
         _project.Clear();
 
-        ProjectFileService.Load("AngleDistanceSample.aep.json", _project);
+        ProjectFileService.Load("sampleNet/AngleDistanceSample.aep.json", _project);
 
         ResetBoardAfterLoadingSample();
     }

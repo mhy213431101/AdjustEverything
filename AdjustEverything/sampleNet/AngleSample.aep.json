@@ -1,0 +1,170 @@
+{
+  "Version": 1,
+  "NetworkType": "Angle",
+  "SavedAt": "2026-06-12T23:17:28.963441+08:00",
+  "LastResult": null,
+  "Points": [
+    {
+      "Name": "A",
+      "CanvasX": 605,
+      "CanvasY": 158,
+      "IsHeightFixed": false,
+      "Height": null,
+      "IsCoordinateFixed": true,
+      "X": 1000,
+      "Y": 1200,
+      "CurrentDisplayMode": 0
+    },
+    {
+      "Name": "B",
+      "CanvasX": 396,
+      "CanvasY": 483,
+      "IsHeightFixed": false,
+      "Height": null,
+      "IsCoordinateFixed": true,
+      "X": 700,
+      "Y": 1100,
+      "CurrentDisplayMode": 0
+    },
+    {
+      "Name": "C",
+      "CanvasX": 723,
+      "CanvasY": 388,
+      "IsHeightFixed": false,
+      "Height": null,
+      "IsCoordinateFixed": false,
+      "X": -388,
+      "Y": 723,
+      "CurrentDisplayMode": 0
+    },
+    {
+      "Name": "D",
+      "CanvasX": 992,
+      "CanvasY": 510,
+      "IsHeightFixed": false,
+      "Height": null,
+      "IsCoordinateFixed": false,
+      "X": -510,
+      "Y": 992,
+      "CurrentDisplayMode": 0
+    }
+  ],
+  "Lines": [
+    {
+      "From": "A",
+      "To": "B"
+    },
+    {
+      "From": "A",
+      "To": "D"
+    },
+    {
+      "From": "D",
+      "To": "B"
+    },
+    {
+      "From": "A",
+      "To": "C"
+    },
+    {
+      "From": "C",
+      "To": "B"
+    },
+    {
+      "From": "C",
+      "To": "D"
+    }
+  ],
+  "KnownPoints": [
+    {
+      "Point": "A"
+    },
+    {
+      "Point": "B"
+    }
+  ],
+  "KnownSides": [],
+  "Baselines": [
+    {
+      "Name": "b1",
+      "From": "A",
+      "To": "B"
+    }
+  ],
+  "HeightObservations": [],
+  "DistanceObservations": [],
+  "AngleObservations": [
+    {
+      "Name": "\u03B21",
+      "From": "C",
+      "Vertex": "B",
+      "To": "D",
+      "Value": 21.801666666666666,
+      "Sigma": 1
+    },
+    {
+      "Name": "\u03B22",
+      "From": "A",
+      "Vertex": "B",
+      "To": "C",
+      "Value": 45.00055555555556,
+      "Sigma": 1
+    },
+    {
+      "Name": "\u03B23",
+      "From": "C",
+      "Vertex": "A",
+      "To": "B",
+      "Value": 71.56416666666667,
+      "Sigma": 1
+    },
+    {
+      "Name": "\u03B24",
+      "From": "D",
+      "Vertex": "A",
+      "To": "C",
+      "Value": 10.305000000000001,
+      "Sigma": 1
+    },
+    {
+      "Name": "\u03B25",
+      "From": "C",
+      "Vertex": "D",
+      "To": "A",
+      "Value": 8.130833333333333,
+      "Sigma": 1
+    },
+    {
+      "Name": "\u03B26",
+      "From": "B",
+      "Vertex": "D",
+      "To": "C",
+      "Value": 23.198055555555555,
+      "Sigma": 1
+    },
+    {
+      "Name": "\u03B27",
+      "From": "D",
+      "Vertex": "C",
+      "To": "B",
+      "Value": 134.99944444444444,
+      "Sigma": 1
+    },
+    {
+      "Name": "\u03B28",
+      "From": "B",
+      "Vertex": "C",
+      "To": "A",
+      "Value": 63.43472222222222,
+      "Sigma": 1
+    },
+    {
+      "Name": "\u03B29",
+      "From": "A",
+      "Vertex": "C",
+      "To": "D",
+      "Value": 161.56666666666666,
+      "Sigma": 1
+    }
+  ]
+}

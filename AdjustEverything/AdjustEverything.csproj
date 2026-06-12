@@ -15,4 +15,10 @@
     <Compile Remove="LinearModel.cs" />
   </ItemGroup>
 
+<ItemGroup>
+  <None Update="sampleNet\**\*">
+    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+  </None>
+</ItemGroup>
+
 </Project>

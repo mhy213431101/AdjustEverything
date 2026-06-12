@@ -1,0 +1,133 @@
+{
+  "Version": 1,
+  "NetworkType": "Distance",
+  "SavedAt": "2026-06-12T17:48:39.2211268+08:00",
+  "LastResult": null,
+  "Points": [
+    {
+      "Name": "A",
+      "CanvasX": 631,
+      "CanvasY": 141,
+      "IsHeightFixed": false,
+      "Height": null,
+      "IsCoordinateFixed": true,
+      "X": 1000,
+      "Y": 1200,
+      "CurrentDisplayMode": 0
+    },
+    {
+      "Name": "B",
+      "CanvasX": 376,
+      "CanvasY": 435,
+      "IsHeightFixed": false,
+      "Height": null,
+      "IsCoordinateFixed": true,
+      "X": 700,
+      "Y": 1100,
+      "CurrentDisplayMode": 0
+    },
+    {
+      "Name": "1",
+      "CanvasX": 647,
+      "CanvasY": 338,
+      "IsHeightFixed": false,
+      "Height": null,
+      "IsCoordinateFixed": false,
+      "X": -338,
+      "Y": 647,
+      "CurrentDisplayMode": 0
+    },
+    {
+      "Name": "2",
+      "CanvasX": 969,
+      "CanvasY": 463,
+      "IsHeightFixed": false,
+      "Height": null,
+      "IsCoordinateFixed": false,
+      "X": -463,
+      "Y": 969,
+      "CurrentDisplayMode": 0
+    }
+  ],
+  "Lines": [
+    {
+      "From": "A",
+      "To": "B"
+    },
+    {
+      "From": "A",
+      "To": "1"
+    },
+    {
+      "From": "A",
+      "To": "2"
+    },
+    {
+      "From": "1",
+      "To": "2"
+    },
+    {
+      "From": "2",
+      "To": "B"
+    },
+    {
+      "From": "B",
+      "To": "1"
+    }
+  ],
+  "KnownPoints": [
+    {
+      "Point": "A"
+    },
+    {
+      "Point": "B"
+    }
+  ],
+  "KnownSides": [],
+  "Baselines": [
+    {
+      "Name": "b2",
+      "From": "A",
+      "To": "B"
+    }
+  ],
+  "HeightObservations": [],
+  "DistanceObservations": [
+    {
+      "Name": "s1",
+      "From": "A",
+      "To": "1",
+      "Value": 250,
+      "Sigma": 1
+    },
+    {
+      "Name": "s2",
+      "From": "A",
+      "To": "2",
+      "Value": 559.015,
+      "Sigma": 1
+    },
+    {
+      "Name": "s3",
+      "From": "1",
+      "To": "2",
+      "Value": 316.227,
+      "Sigma": 1
+    },
+    {
+      "Name": "s4",
+      "From": "2",
+      "To": "B",
+      "Value": 602.082,
+      "Sigma": 1
+    },
+    {
+      "Name": "s5",
+      "From": "B",
+      "To": "1",
+      "Value": 335.407,
+      "Sigma": 1
+    }
+  ],
+  "AngleObservations": []
+}
