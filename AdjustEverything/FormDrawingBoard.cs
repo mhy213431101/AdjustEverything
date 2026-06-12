@@ -242,6 +242,10 @@ public partial class FormDrawingBoard : Form
         };
         panel.Controls.Add(angleDistanceSample);
 
+        var Approximate = BuildSideButton("近似坐标计算");
+        Approximate.Click += (_, _) => RunApproximate();
+        panel.Controls.Add(Approximate);
+
         var importProject = BuildSideButton("导入项目");
         importProject.Click += (_, _) => ImportProjectFromFile();
         panel.Controls.Add(importProject);
@@ -1294,19 +1298,20 @@ AngleObservation observation)
                 parameterIndex[unknownPoints[i]] = 2 * i;
             }
 
+            var approximateCoordinates =
+                ApproximateCoordinateBuilder.Build(_project);
+
             var x0 = new double[unknownPoints.Count * 2];
 
             for (int i = 0; i < unknownPoints.Count; i++)
             {
                 var point = unknownPoints[i];
 
-                x0[2 * i] =
-                    point.X
-                    ?? SurveyCoordinateMapper.XFromCanvas(point.CanvasLocation);
+                var coordinate = approximateCoordinates[point];
 
-                x0[2 * i + 1] =
-                    point.Y
-                    ?? SurveyCoordinateMapper.YFromCanvas(point.CanvasLocation);
+                x0[2 * i] = coordinate.X;
+
+                x0[2 * i + 1] = coordinate.Y;
             }
 
             var model =
@@ -1665,7 +1670,31 @@ AngleObservation observation)
         ShowSelectionProperties(_board.SelectedObject);
     }
 
+    private void RunApproximate()
+    {
+        var coordinates =
+       ApproximateCoordinateBuilder.Build(
+           _project);
 
+        StringBuilder sb =
+            new();
+
+        sb.AppendLine(
+            "近似坐标结果");
+
+        sb.AppendLine();
+
+        foreach (var item in coordinates)
+        {
+            sb.AppendLine(
+                $"{item.Key.Name,-4}" +
+                $"X={item.Value.X:F3} " +
+                $"Y={item.Value.Y:F3}");
+        }
+
+        MessageBox.Show(
+            sb.ToString());
+    }
     private void RunHeightNetworkCheck()
     {
         var validation = ProjectDiagnostics.ValidateHeightNetwork(_project);
