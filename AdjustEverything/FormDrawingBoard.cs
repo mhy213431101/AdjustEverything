@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 
 namespace AdjustEverything;
@@ -241,10 +242,6 @@ public partial class FormDrawingBoard : Form
             SetMode(ToolMode.AddPoint);
         };
         panel.Controls.Add(angleDistanceSample);
-
-        var Approximate = BuildSideButton("近似坐标计算");
-        Approximate.Click += (_, _) => RunApproximate();
-        panel.Controls.Add(Approximate);
 
         var importProject = BuildSideButton("导入项目");
         importProject.Click += (_, _) => ImportProjectFromFile();
@@ -1223,7 +1220,7 @@ AngleObservation observation)
             {
                 sb.AppendLine(
                     $"{unknownPoints[i].Name,-4}  " +
-                    $"{result.XHat[i]:F4}");
+                    $"{result.XHat[i]:F3}");
             }
 
             sb.AppendLine();
@@ -1233,7 +1230,7 @@ AngleObservation observation)
             {
                 sb.AppendLine(
                     $"{observations[i].Name,-4}  " +
-                    $"{1000 * result.LS.V[i]:F1}");
+                    $"{result.LS.V[i]:F1}");
             }
 
             sb.AppendLine(precision.Report);
@@ -1298,30 +1295,46 @@ AngleObservation observation)
                 parameterIndex[unknownPoints[i]] = 2 * i;
             }
 
-            var approximateCoordinates =
-                ApproximateCoordinateBuilder.Build(_project);
+            //1. 解出所有近似坐标
+            var approximateCoordinates = ApproximateCoordinateBuilder.Build(_project);
 
-            var x0 = new double[unknownPoints.Count * 2];
 
-            for (int i = 0; i < unknownPoints.Count; i++)
-            {
-                var point = unknownPoints[i];
-
-                var coordinate = approximateCoordinates[point];
-
-                x0[2 * i] = coordinate.X;
-
-                x0[2 * i + 1] = coordinate.Y;
-            }
-
-            var model =
-                new DistanceModel(
+            // 2. 生成所有初值组合
+            var initialSolutions =
+                ApproximateCoordinateBuilder.BuildInitialSolutions(
+                    _project,
                     unknownPoints,
-                    observations,
-                    parameterIndex,
-                    x0);
+                    approximateCoordinates);
 
-            var result = NonlinearLeastSquaresSolver.Solve(model, model);
+            double bestVPV = double.MaxValue;
+            var result = default(NonlinearResult);
+
+            // 3. 根据最小VPV值选择几何最优平差解
+            foreach (var x0Candidate in initialSolutions)
+            {
+                var x0 = x0Candidate;
+
+                var model =
+                    new DistanceModel(
+                        unknownPoints,
+                        observations,
+                        parameterIndex,
+                        x0);
+
+                var resultP =
+                    NonlinearLeastSquaresSolver.Solve(model, model);
+
+                double vpv =
+                    MatrixUtility.ComputeVPV(
+                        resultP.LS.V,
+                        resultP.LS.P);
+
+                if (vpv < bestVPV)
+                {
+                    bestVPV = vpv;
+                    result = resultP;
+                }
+            }
 
             var precision = PrecisionEstimator.Estimate(result.LS);
 
@@ -1366,8 +1379,8 @@ AngleObservation observation)
 
                 sb.AppendLine(
                     $"{p.Name,-6} " +
-                    $"X={result.XHat[2 * i]:F4} " +
-                    $"Y={result.XHat[2 * i + 1]:F4}");
+                    $"X={result.XHat[2 * i]:F3} " +
+                    $"Y={result.XHat[2 * i + 1]:F3}");
             }
 
             sb.AppendLine();
@@ -1379,7 +1392,7 @@ AngleObservation observation)
             {
                 sb.AppendLine(
                     $"{observations[i].Name,-6} " +
-                    $"{v[i] * 1000:F1}");
+                    $"{v[i]:F1}");
             }
 
             sb.AppendLine(precision.Report);
@@ -1474,7 +1487,7 @@ AngleObservation observation)
             for (int i = 0; i < unknownPoints.Count; i++)
             {
                 var p = unknownPoints[i];
-                sb.AppendLine($"{p.Name,-6} X={result.XHat[2 * i]:F4} Y={result.XHat[2 * i + 1]:F4}");
+                sb.AppendLine($"{p.Name,-6} X={result.XHat[2 * i]:F3} Y={result.XHat[2 * i + 1]:F4}");
             }
             sb.AppendLine();
 
@@ -1622,7 +1635,7 @@ AngleObservation observation)
             for (int i = 0; i < unknownPoints.Count; i++)
             {
                 var p = unknownPoints[i];
-                sb.AppendLine($"{p.Name,-6} X={result.XHat[2 * i]:F4} Y={result.XHat[2 * i + 1]:F4}");
+                sb.AppendLine($"{p.Name,-6} X={result.XHat[2 * i]:F3} Y={result.XHat[2 * i + 1]:F3}");
             }
             sb.AppendLine();
 
@@ -1670,31 +1683,6 @@ AngleObservation observation)
         ShowSelectionProperties(_board.SelectedObject);
     }
 
-    private void RunApproximate()
-    {
-        var coordinates =
-       ApproximateCoordinateBuilder.Build(
-           _project);
-
-        StringBuilder sb =
-            new();
-
-        sb.AppendLine(
-            "近似坐标结果");
-
-        sb.AppendLine();
-
-        foreach (var item in coordinates)
-        {
-            sb.AppendLine(
-                $"{item.Key.Name,-4}" +
-                $"X={item.Value.X:F3} " +
-                $"Y={item.Value.Y:F3}");
-        }
-
-        MessageBox.Show(
-            sb.ToString());
-    }
     private void RunHeightNetworkCheck()
     {
         var validation = ProjectDiagnostics.ValidateHeightNetwork(_project);
