@@ -23,14 +23,11 @@ internal sealed class AdjustmentProject
 
     public SurveyPoint AddPoint(string? name, PointF canvasLocation)
     {
-        var surveyLocation = SurveyCoordinateMapper.FromCanvas(canvasLocation);
         var point = new SurveyPoint
         {
             Id = Guid.NewGuid(),
             Name = string.IsNullOrWhiteSpace(name) ? NextPointName() : name.Trim(),
             CanvasLocation = canvasLocation,
-            X = surveyLocation.X,
-            Y = surveyLocation.Y,
         };
         Points.Add(point);
         return point;
@@ -460,15 +457,25 @@ internal sealed class AngleObservation
     {
         get
         {
+            if (!From.X.HasValue ||
+                !From.Y.HasValue ||
+                !Vertex.X.HasValue ||
+                !Vertex.Y.HasValue ||
+                !To.X.HasValue ||
+                !To.Y.HasValue)
+            {
+                return double.NaN;
+            }
+
             double a1 =
                 Math.Atan2(
-                    From.Y!.Value - Vertex.Y!.Value,
-                    From.X!.Value - Vertex.X!.Value);
+                    From.Y.Value - Vertex.Y.Value,
+                    From.X.Value - Vertex.X.Value);
 
             double a2 =
                 Math.Atan2(
-                    To.Y!.Value - Vertex.Y!.Value,
-                    To.X!.Value - Vertex.X!.Value);
+                    To.Y.Value - Vertex.Y.Value,
+                    To.X.Value - Vertex.X.Value);
 
             double angle =
                 (a2 - a1) *

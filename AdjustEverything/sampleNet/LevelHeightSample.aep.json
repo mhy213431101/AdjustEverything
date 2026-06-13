@@ -1,191 +1,201 @@
-{
-  "Version": 1,
-  "NetworkType": "Height",
-  "SavedAt": "2026-06-12T19:35:21.4024004+08:00",
-  "LastResult": null,
-  "Points": [
-    {
-      "Name": "A",
-      "CanvasX": 273,
-      "CanvasY": 367,
-      "IsHeightFixed": true,
-      "Height": 1.368,
-      "IsCoordinateFixed": false,
-      "X": -367,
-      "Y": 273,
-      "CurrentDisplayMode": 0
-    },
-    {
-      "Name": "B",
-      "CanvasX": 487,
-      "CanvasY": 224,
-      "IsHeightFixed": false,
-      "Height": 5.088230832351387,
-      "IsCoordinateFixed": false,
-      "X": -224,
-      "Y": 487,
-      "CurrentDisplayMode": 0
-    },
-    {
-      "Name": "C",
-      "CanvasX": 496,
-      "CanvasY": 534,
-      "IsHeightFixed": false,
-      "Height": 3.7340218070338613,
-      "IsCoordinateFixed": false,
-      "X": -534,
-      "Y": 496,
-      "CurrentDisplayMode": 0
-    },
-    {
-      "Name": "D",
-      "CanvasX": 926,
-      "CanvasY": 228,
-      "IsHeightFixed": false,
-      "Height": 5.670592772205876,
-      "IsCoordinateFixed": false,
-      "X": -228,
-      "Y": 926,
-      "CurrentDisplayMode": 0
-    },
-    {
-      "Name": "E",
-      "CanvasX": 947,
-      "CanvasY": 568,
-      "IsHeightFixed": false,
-      "Height": 5.608019609853953,
-      "IsCoordinateFixed": false,
-      "X": -568,
-      "Y": 947,
-      "CurrentDisplayMode": 0
-    },
-    {
-      "Name": "F",
-      "CanvasX": 721,
-      "CanvasY": 400,
-      "IsHeightFixed": true,
-      "Height": 4.534,
-      "IsCoordinateFixed": false,
-      "X": -400,
-      "Y": 721,
-      "CurrentDisplayMode": 0
-    }
-  ],
-  "Lines": [
-    {
-      "From": "A",
-      "To": "C"
-    },
-    {
-      "From": "C",
-      "To": "B"
-    },
-    {
-      "From": "B",
-      "To": "A"
-    },
-    {
-      "From": "B",
-      "To": "D"
-    },
-    {
-      "From": "D",
-      "To": "F"
-    },
-    {
-      "From": "F",
-      "To": "C"
-    },
-    {
-      "From": "C",
-      "To": "E"
-    },
-    {
-      "From": "E",
-      "To": "F"
-    },
-    {
-      "From": "E",
-      "To": "D"
-    }
-  ],
-  "KnownPoints": [],
-  "KnownSides": [],
-  "Baselines": [],
-  "HeightObservations": [
-    {
-      "Name": "h1",
-      "From": "A",
-      "To": "C",
-      "Value": 2.369,
-      "Length": 1.3,
-      "Sigma": 1
-    },
-    {
-      "Name": "h2",
-      "From": "C",
-      "To": "B",
-      "Value": 1.357,
-      "Length": 1.5,
-      "Sigma": 1
-    },
-    {
-      "Name": "h3",
-      "From": "B",
-      "To": "A",
-      "Value": -3.714,
-      "Length": 1.8,
-      "Sigma": 1
-    },
-    {
-      "Name": "h4",
-      "From": "B",
-      "To": "D",
-      "Value": 0.579,
-      "Length": 2.1,
-      "Sigma": 1
-    },
-    {
-      "Name": "h5",
-      "From": "D",
-      "To": "F",
-      "Value": -1.139,
-      "Length": 0.7,
-      "Sigma": 1
-    },
-    {
-      "Name": "h6",
-      "From": "F",
-      "To": "C",
-      "Value": -0.802,
-      "Length": 0.9,
-      "Sigma": 1
-    },
-    {
-      "Name": "h7",
-      "From": "C",
-      "To": "E",
-      "Value": 1.872,
-      "Length": 1.1,
-      "Sigma": 1
-    },
-    {
-      "Name": "h8",
-      "From": "E",
-      "To": "F",
-      "Value": -1.074,
-      "Length": 0.9,
-      "Sigma": 1
-    },
-    {
-      "Name": "h9",
-      "From": "E",
-      "To": "D",
-      "Value": 0.06,
-      "Length": 1.4,
-      "Sigma": 1
-    }
-  ],
-  "DistanceObservations": [],
-  "AngleObservations": []
+﻿{
+    "Version":  1,
+    "NetworkType":  "Height",
+    "SavedAt":  "2026-06-12T19:35:21.4024004+08:00",
+    "LastResult":  null,
+    "Points":  [
+                   {
+                       "Name":  "A",
+                       "CanvasX":  273,
+                       "CanvasY":  367,
+                       "IsHeightFixed":  true,
+                       "Height":  1.368,
+                       "IsCoordinateFixed":  false,
+                       "X":  null,
+                       "Y":  null,
+                       "CurrentDisplayMode":  0
+                   },
+                   {
+                       "Name":  "B",
+                       "CanvasX":  487,
+                       "CanvasY":  224,
+                       "IsHeightFixed":  false,
+                       "Height":  5.088230832351387,
+                       "IsCoordinateFixed":  false,
+                       "X":  null,
+                       "Y":  null,
+                       "CurrentDisplayMode":  0
+                   },
+                   {
+                       "Name":  "C",
+                       "CanvasX":  496,
+                       "CanvasY":  534,
+                       "IsHeightFixed":  false,
+                       "Height":  3.7340218070338613,
+                       "IsCoordinateFixed":  false,
+                       "X":  null,
+                       "Y":  null,
+                       "CurrentDisplayMode":  0
+                   },
+                   {
+                       "Name":  "D",
+                       "CanvasX":  926,
+                       "CanvasY":  228,
+                       "IsHeightFixed":  false,
+                       "Height":  5.670592772205876,
+                       "IsCoordinateFixed":  false,
+                       "X":  null,
+                       "Y":  null,
+                       "CurrentDisplayMode":  0
+                   },
+                   {
+                       "Name":  "E",
+                       "CanvasX":  947,
+                       "CanvasY":  568,
+                       "IsHeightFixed":  false,
+                       "Height":  5.608019609853953,
+                       "IsCoordinateFixed":  false,
+                       "X":  null,
+                       "Y":  null,
+                       "CurrentDisplayMode":  0
+                   },
+                   {
+                       "Name":  "F",
+                       "CanvasX":  721,
+                       "CanvasY":  400,
+                       "IsHeightFixed":  true,
+                       "Height":  4.534,
+                       "IsCoordinateFixed":  false,
+                       "X":  null,
+                       "Y":  null,
+                       "CurrentDisplayMode":  0
+                   }
+               ],
+    "Lines":  [
+                  {
+                      "From":  "A",
+                      "To":  "C"
+                  },
+                  {
+                      "From":  "C",
+                      "To":  "B"
+                  },
+                  {
+                      "From":  "B",
+                      "To":  "A"
+                  },
+                  {
+                      "From":  "B",
+                      "To":  "D"
+                  },
+                  {
+                      "From":  "D",
+                      "To":  "F"
+                  },
+                  {
+                      "From":  "F",
+                      "To":  "C"
+                  },
+                  {
+                      "From":  "C",
+                      "To":  "E"
+                  },
+                  {
+                      "From":  "E",
+                      "To":  "F"
+                  },
+                  {
+                      "From":  "E",
+                      "To":  "D"
+                  }
+              ],
+    "KnownPoints":  [
+
+                    ],
+    "KnownSides":  [
+
+                   ],
+    "Baselines":  [
+
+                  ],
+    "HeightObservations":  [
+                               {
+                                   "Name":  "h1",
+                                   "From":  "A",
+                                   "To":  "C",
+                                   "Value":  2.369,
+                                   "Length":  1.3,
+                                   "Sigma":  1
+                               },
+                               {
+                                   "Name":  "h2",
+                                   "From":  "C",
+                                   "To":  "B",
+                                   "Value":  1.357,
+                                   "Length":  1.5,
+                                   "Sigma":  1
+                               },
+                               {
+                                   "Name":  "h3",
+                                   "From":  "B",
+                                   "To":  "A",
+                                   "Value":  -3.714,
+                                   "Length":  1.8,
+                                   "Sigma":  1
+                               },
+                               {
+                                   "Name":  "h4",
+                                   "From":  "B",
+                                   "To":  "D",
+                                   "Value":  0.579,
+                                   "Length":  2.1,
+                                   "Sigma":  1
+                               },
+                               {
+                                   "Name":  "h5",
+                                   "From":  "D",
+                                   "To":  "F",
+                                   "Value":  -1.139,
+                                   "Length":  0.7,
+                                   "Sigma":  1
+                               },
+                               {
+                                   "Name":  "h6",
+                                   "From":  "F",
+                                   "To":  "C",
+                                   "Value":  -0.802,
+                                   "Length":  0.9,
+                                   "Sigma":  1
+                               },
+                               {
+                                   "Name":  "h7",
+                                   "From":  "C",
+                                   "To":  "E",
+                                   "Value":  1.872,
+                                   "Length":  1.1,
+                                   "Sigma":  1
+                               },
+                               {
+                                   "Name":  "h8",
+                                   "From":  "E",
+                                   "To":  "F",
+                                   "Value":  -1.074,
+                                   "Length":  0.9,
+                                   "Sigma":  1
+                               },
+                               {
+                                   "Name":  "h9",
+                                   "From":  "E",
+                                   "To":  "D",
+                                   "Value":  0.06,
+                                   "Length":  1.4,
+                                   "Sigma":  1
+                               }
+                           ],
+    "DistanceObservations":  [
+
+                             ],
+    "AngleObservations":  [
+
+                          ]
 }
