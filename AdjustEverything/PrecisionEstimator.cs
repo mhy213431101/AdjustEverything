@@ -146,12 +146,12 @@ internal static class PrecisionEstimator
         if (type == NetType.LevelHeight || type == NetType.Distance)
         {
             scaled.V = MatrixUtility.ScaMultiplyVec(result.LS.V, 1000);
-            scaled.B = MatrixUtility.MultiplyScalar(result.LS.B, 1);
+            scaled.B = result.LS.B;
         }
         else if (type == NetType.Angle)
         {
             scaled.V = MatrixUtility.ScaMultiplyVec(result.LS.V, RHO);
-            scaled.B = MatrixUtility.MultiplyScalar(result.LS.B, 1);
+            scaled.B = MatrixUtility.MultiplyScalar(result.LS.B, Math.Sqrt(RHO));
         }
         else if (type == NetType.AngleDistance)
         {

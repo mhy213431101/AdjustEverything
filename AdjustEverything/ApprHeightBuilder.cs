@@ -1,6 +1,6 @@
 ﻿using AdjustEverything;
 
-internal static class ApproximateHeightBuilder
+internal static class ApprHeightBuilder
 {
     /// <summary>
     /// 根据已知高程点和高差观测推算未知点近似高程

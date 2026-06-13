@@ -286,6 +286,29 @@ public partial class FormDrawingBoard : Form
         delete.Click += (_, _) => DeleteSelectedObject();
         panel.Controls.Add(delete);
 
+        var aa = BuildSideButton("计算近似");
+        aa.Click += (_, _) =>
+        {
+            var coords =
+                ApprPointBuilder4A.Build(
+                    _project);
+
+            var sb =
+                new StringBuilder();
+
+            foreach (var item in coords)
+            {
+                sb.AppendLine(
+                    $"{item.Key.Name,-4}" +
+                    $"X={item.Value.X:F3} " +
+                    $"Y={item.Value.Y:F3}");
+            }
+
+            MessageBox.Show(sb.ToString());
+
+        };
+        panel.Controls.Add(aa);
+
         var clear = BuildSideButton("清空");
         clear.Click += (_, _) =>
         {
@@ -298,6 +321,8 @@ public partial class FormDrawingBoard : Form
 
         return panel;
     }
+
+
 
     private static Button BuildSideButton(string text)
     {
@@ -1037,27 +1062,6 @@ public partial class FormDrawingBoard : Form
         return false;
     }
 
-    private static double[] BuildCoordinateX0(List<SurveyPoint> unknownPoints)
-    {
-        var x0 = new double[unknownPoints.Count * 2];
-
-        for (int i = 0; i < unknownPoints.Count; i++)
-        {
-            var point = unknownPoints[i];
-
-            if (!point.X.HasValue || !point.Y.HasValue)
-            {
-                throw new InvalidOperationException(
-                    $"点 {point.Name} 缺少 X/Y 近似坐标。请在属性面板中输入坐标，画板位置不会参与平差计算。");
-            }
-
-            x0[2 * i] = point.X.Value;
-            x0[2 * i + 1] = point.Y.Value;
-        }
-
-        return x0;
-    }
-
     private void RunHeightAdjustment()
     {
         try
@@ -1087,7 +1091,7 @@ public partial class FormDrawingBoard : Form
                 .ToDictionary(x => x.p, x => x.i);
 
             var X0 =
-                ApproximateHeightBuilder.BuildX0(
+                ApprHeightBuilder.BuildX0(
                     _project.Points,
                     unknownPoints,
                     observations);
@@ -1218,12 +1222,12 @@ public partial class FormDrawingBoard : Form
             }
 
             //1. 解出所有近似坐标
-            var approximateCoordinates = ApproximateCoordinateBuilder.Build(_project);
+            var approximateCoordinates = ApprPointBuilder4D.Build(_project);
 
 
             // 2. 生成所有初值组合
             var initialSolutions =
-                ApproximateCoordinateBuilder.BuildInitialSolutions(
+                ApprPointBuilder4D.BuildInitialSolutions(
                     _project,
                     unknownPoints,
                     approximateCoordinates);
@@ -1381,8 +1385,24 @@ public partial class FormDrawingBoard : Form
             for (int i = 0; i < unknownPoints.Count; i++)
                 paramIndex[unknownPoints[i]] = 2 * i;
 
+            //求近似
+            var coords = ApprPointBuilder4A.Build(_project);
+
+            var x0 = new double[unknownPoints.Count * 2];
+
+            for (int i = 0; i < unknownPoints.Count; i++)
+            {
+                var point = unknownPoints[i];
+
+                var coordinate =
+                    coords[point];
+
+                x0[2 * i] = coordinate.X;
+
+                x0[2 * i + 1] = coordinate.Y;
+            }
+
             // 构造模型
-            var x0 = BuildCoordinateX0(unknownPoints);
             var model = new AngleModel(unknownPoints, observations, paramIndex, x0);
 
             // 非线性最小二乘求解
@@ -1494,26 +1514,25 @@ public partial class FormDrawingBoard : Form
             var parameterIndex =
                 new Dictionary<SurveyPoint, int>();
 
+            //求近似
+            var coords = ApprPointBuilder4A.Build(_project);
+
+            var x0 = new double[unknownPoints.Count * 2];
+
             for (int i = 0; i < unknownPoints.Count; i++)
             {
-                parameterIndex[
-                    unknownPoints[i]]
-                    = 2 * i;
+                var point = unknownPoints[i];
+
+                var coordinate =
+                    coords[point];
+
+                x0[2 * i] = coordinate.X;
+
+                x0[2 * i + 1] = coordinate.Y;
             }
 
-            var approximateCoordinates = ApproximateCoordinateBuilder.Build(_project);
-            var initialSolutions =
-                ApproximateCoordinateBuilder.BuildInitialSolutions(
-                    _project,
-                    unknownPoints,
-                    approximateCoordinates);
 
-            double bestVPV = double.MaxValue;
-            var result = default(NonlinearResult);
-
-            foreach (var x0 in initialSolutions)
-            {
-                var model =
+            var model =
                     new AngleDistanceModel(
                         unknownPoints,
                         distanceObs,
@@ -1521,25 +1540,7 @@ public partial class FormDrawingBoard : Form
                         parameterIndex,
                         x0);
 
-                var candidate =
-                    NonlinearLeastSquaresSolver.Solve(model, model);
-
-                double vpv =
-                    MatrixUtility.ComputeVPV(
-                        candidate.LS.V,
-                        candidate.LS.P);
-
-                if (vpv < bestVPV)
-                {
-                    bestVPV = vpv;
-                    result = candidate;
-                }
-            }
-
-            if (result is null)
-            {
-                throw new InvalidOperationException("无法生成边角网初始坐标，请输入未知点 X/Y 近似值或补充足够的距离观测。");
-            }
+            var result = NonlinearLeastSquaresSolver.Solve(model, model);
 
             var precision = PrecisionEstimator.Estimate(result, PrecisionEstimator.NetType.AngleDistance);
 
@@ -1656,6 +1657,7 @@ public partial class FormDrawingBoard : Form
             ? "边角网检查未通过，请先修正错误。"
             : "边角网检查通过，可以开始计算。";
     }
+
 
     private void DeleteSelectedObject()
     {

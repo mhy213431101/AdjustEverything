@@ -1,174 +1,181 @@
-﻿{
-    "Version":  1,
-    "NetworkType":  "AngleDistance",
-    "SavedAt":  "2026-06-12T22:59:52.145317+08:00",
-    "LastResult":  null,
-    "Points":  [
-                   {
-                       "Name":  "A",
-                       "CanvasX":  197,
-                       "CanvasY":  238,
-                       "IsHeightFixed":  false,
-                       "Height":  null,
-                       "IsCoordinateFixed":  true,
-                       "X":  1000,
-                       "Y":  1000,
-                       "CurrentDisplayMode":  0
-                   },
-                   {
-                       "Name":  "B",
-                       "CanvasX":  358,
-                       "CanvasY":  385,
-                       "IsHeightFixed":  false,
-                       "Height":  null,
-                       "IsCoordinateFixed":  true,
-                       "X":  850,
-                       "Y":  1100,
-                       "CurrentDisplayMode":  0
-                   },
-                   {
-                       "Name":  "C",
-                       "CanvasX":  585,
-                       "CanvasY":  259,
-                       "IsHeightFixed":  false,
-                       "Height":  null,
-                       "IsCoordinateFixed":  false,
-                       "X":  890,
-                       "Y":  1550,
-                       "CurrentDisplayMode":  0
-                   },
-                   {
-                       "Name":  "D",
-                       "CanvasX":  763,
-                       "CanvasY":  405,
-                       "IsHeightFixed":  false,
-                       "Height":  null,
-                       "IsCoordinateFixed":  false,
-                       "X":  870,
-                       "Y":  1700,
-                       "CurrentDisplayMode":  0
-                   },
-                   {
-                       "Name":  "E",
-                       "CanvasX":  950,
-                       "CanvasY":  243,
-                       "IsHeightFixed":  false,
-                       "Height":  null,
-                       "IsCoordinateFixed":  false,
-                       "X":  null,
-                       "Y":  null,
-                       "CurrentDisplayMode":  0
-                   },
-                   {
-                       "Name":  "F",
-                       "CanvasX":  1131,
-                       "CanvasY":  428,
-                       "IsHeightFixed":  false,
-                       "Height":  null,
-                       "IsCoordinateFixed":  false,
-                       "X":  null,
-                       "Y":  null,
-                       "CurrentDisplayMode":  0
-                   }
-               ],
-    "Lines":  [
-                  {
-                      "From":  "A",
-                      "To":  "B"
-                  },
-                  {
-                      "From":  "E",
-                      "To":  "F"
-                  },
-                  {
-                      "From":  "B",
-                      "To":  "C"
-                  },
-                  {
-                      "From":  "C",
-                      "To":  "D"
-                  },
-                  {
-                      "From":  "D",
-                      "To":  "E"
-                  }
-              ],
-    "KnownPoints":  [
-                        {
-                            "Point":  "A"
-                        },
-                        {
-                            "Point":  "B"
-                        }
-                    ],
-    "KnownSides":  [
-
-                   ],
-    "Baselines":  [
-                      {
-                          "Name":  "b1",
-                          "From":  "A",
-                          "To":  "B"
-                      }
-                  ],
-    "HeightObservations":  [
-
-                           ],
-    "DistanceObservations":  [
-                                 {
-                                     "Name":  "s1",
-                                     "From":  "B",
-                                     "To":  "C",
-                                     "Value":  205.179,
-                                     "Sigma":  1
-                                 },
-                                 {
-                                     "Name":  "s2",
-                                     "From":  "C",
-                                     "To":  "D",
-                                     "Value":  198.495,
-                                     "Sigma":  1
-                                 },
-                                 {
-                                     "Name":  "s3",
-                                     "From":  "D",
-                                     "To":  "E",
-                                     "Value":  198.493,
-                                     "Sigma":  1
-                                 }
-                             ],
-    "AngleObservations":  [
-                              {
-                                  "Name":  "a1",
-                                  "From":  "A",
-                                  "Vertex":  "B",
-                                  "To":  "C",
-                                  "Value":  80.66555555555556,
-                                  "Sigma":  1
-                              },
-                              {
-                                  "Name":  "a2",
-                                  "From":  "B",
-                                  "Vertex":  "C",
-                                  "To":  "D",
-                                  "Value":  263.93888888888887,
-                                  "Sigma":  1
-                              },
-                              {
-                                  "Name":  "a3",
-                                  "From":  "C",
-                                  "Vertex":  "D",
-                                  "To":  "E",
-                                  "Value":  98.17027777777778,
-                                  "Sigma":  1
-                              },
-                              {
-                                  "Name":  "a4",
-                                  "From":  "D",
-                                  "Vertex":  "E",
-                                  "To":  "F",
-                                  "Value":  259.5752777777778,
-                                  "Sigma":  1
-                              }
-                          ]
+{
+  "Version": 1,
+  "NetworkType": "AngleDistance",
+  "SavedAt": "2026-06-14T06:01:10.3597992+08:00",
+  "LastResult": null,
+  "Points": [
+    {
+      "Name": "A",
+      "CanvasX": 197,
+      "CanvasY": 238,
+      "IsHeightFixed": false,
+      "Height": null,
+      "IsCoordinateFixed": true,
+      "X": 1000,
+      "Y": 1000,
+      "CurrentDisplayMode": 0
+    },
+    {
+      "Name": "B",
+      "CanvasX": 358,
+      "CanvasY": 385,
+      "IsHeightFixed": false,
+      "Height": null,
+      "IsCoordinateFixed": true,
+      "X": 850,
+      "Y": 1100,
+      "CurrentDisplayMode": 0
+    },
+    {
+      "Name": "1",
+      "CanvasX": 585,
+      "CanvasY": 259,
+      "IsHeightFixed": false,
+      "Height": null,
+      "IsCoordinateFixed": false,
+      "X": null,
+      "Y": null,
+      "CurrentDisplayMode": 0
+    },
+    {
+      "Name": "2",
+      "CanvasX": 763,
+      "CanvasY": 405,
+      "IsHeightFixed": false,
+      "Height": null,
+      "IsCoordinateFixed": false,
+      "X": null,
+      "Y": null,
+      "CurrentDisplayMode": 0
+    },
+    {
+      "Name": "C",
+      "CanvasX": 950,
+      "CanvasY": 243,
+      "IsHeightFixed": false,
+      "Height": null,
+      "IsCoordinateFixed": true,
+      "X": 990,
+      "Y": 1550,
+      "CurrentDisplayMode": 0
+    },
+    {
+      "Name": "D",
+      "CanvasX": 1131,
+      "CanvasY": 428,
+      "IsHeightFixed": false,
+      "Height": null,
+      "IsCoordinateFixed": true,
+      "X": 870,
+      "Y": 1700,
+      "CurrentDisplayMode": 0
+    }
+  ],
+  "Lines": [
+    {
+      "From": "A",
+      "To": "B"
+    },
+    {
+      "From": "C",
+      "To": "D"
+    },
+    {
+      "From": "B",
+      "To": "1"
+    },
+    {
+      "From": "1",
+      "To": "2"
+    },
+    {
+      "From": "2",
+      "To": "C"
+    }
+  ],
+  "KnownPoints": [
+    {
+      "Point": "A"
+    },
+    {
+      "Point": "B"
+    },
+    {
+      "Point": "C"
+    },
+    {
+      "Point": "D"
+    }
+  ],
+  "KnownSides": [],
+  "Baselines": [
+    {
+      "Name": "b1",
+      "From": "A",
+      "To": "B"
+    },
+    {
+      "Name": "b2",
+      "From": "C",
+      "To": "D"
+    }
+  ],
+  "HeightObservations": [],
+  "DistanceObservations": [
+    {
+      "Name": "s1",
+      "From": "B",
+      "To": "1",
+      "Value": 205.179,
+      "Sigma": 1
+    },
+    {
+      "Name": "s2",
+      "From": "1",
+      "To": "2",
+      "Value": 198.495,
+      "Sigma": 1
+    },
+    {
+      "Name": "s3",
+      "From": "2",
+      "To": "C",
+      "Value": 198.493,
+      "Sigma": 1
+    }
+  ],
+  "AngleObservations": [
+    {
+      "Name": "a1",
+      "From": "A",
+      "Vertex": "B",
+      "To": "1",
+      "Value": 80.66555555555556,
+      "Sigma": 1
+    },
+    {
+      "Name": "a2",
+      "From": "B",
+      "Vertex": "1",
+      "To": "2",
+      "Value": 263.93888888888887,
+      "Sigma": 1
+    },
+    {
+      "Name": "a3",
+      "From": "1",
+      "Vertex": "2",
+      "To": "C",
+      "Value": 98.17027777777778,
+      "Sigma": 1
+    },
+    {
+      "Name": "a4",
+      "From": "2",
+      "Vertex": "C",
+      "To": "D",
+      "Value": 259.5752777777778,
+      "Sigma": 1
+    }
+  ]
 }

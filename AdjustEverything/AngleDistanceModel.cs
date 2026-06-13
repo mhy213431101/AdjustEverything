@@ -39,10 +39,8 @@ internal sealed class AngleDistanceModel : IAdjustmentModel, ILinearizable
     {
         int row = 0;
 
-        //-------------------------------------------------
-        // 距离观测
-        //-------------------------------------------------
 
+        // 距离观测
         foreach (var o in _distances)
         {
             var from = Get(o.From, X);
@@ -88,10 +86,8 @@ internal sealed class AngleDistanceModel : IAdjustmentModel, ILinearizable
             row++;
         }
 
-        //-------------------------------------------------
-        // 角度观测
-        //-------------------------------------------------
 
+        // 角度观测
         foreach (var o in _angles)
         {
            

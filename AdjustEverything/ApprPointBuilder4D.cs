@@ -1,6 +1,10 @@
-﻿namespace AdjustEverything;
+﻿/// <summary>
+/// 测边网近似坐标计算
+/// 给出所有可能解集
+/// </summar
+namespace AdjustEverything;
 
-internal static class ApproximateCoordinateBuilder
+internal static class ApprPointBuilder4D
 {
     public static Dictionary<SurveyPoint, List<PointD>> Build(
         AdjustmentProject project)
@@ -8,10 +12,7 @@ internal static class ApproximateCoordinateBuilder
         var coordinates =
             new Dictionary<SurveyPoint, List<PointD>>();
 
-        //--------------------------------------
         // 已输入坐标的点（单解）
-        // IsCoordinateFixed=true 表示控制点；IsCoordinateFixed=false 表示未知点初值。
-        //--------------------------------------
 
         foreach (var point in project.Points)
         {
@@ -25,10 +26,7 @@ internal static class ApproximateCoordinateBuilder
                 };
         }
 
-        //--------------------------------------
         // 逐步传播多解
-        //--------------------------------------
-
         bool changed;
 
         do
@@ -70,9 +68,7 @@ internal static class ApproximateCoordinateBuilder
         var circles =
             new List<(PointD Center, double Radius)>();
 
-        //--------------------------------------
         // 收集所有可用观测圆
-        //--------------------------------------
 
         foreach (var obs in observations)
         {
@@ -99,10 +95,7 @@ internal static class ApproximateCoordinateBuilder
         if (circles.Count < 2)
             return false;
 
-        //--------------------------------------
         // 任意两圆组合生成所有候选解
-        //--------------------------------------
-
         for (int i = 0; i < circles.Count; i++)
         {
             for (int j = i + 1; j < circles.Count; j++)
@@ -129,10 +122,7 @@ internal static class ApproximateCoordinateBuilder
         if (results.Count == 0)
             return false;
 
-        //--------------------------------------
         // 去重
-        //--------------------------------------
-
         results =
             results
                 .Distinct(new PointComparer())
@@ -223,7 +213,6 @@ internal static class ApproximateCoordinateBuilder
     {
         // candidatePoints:
         // 每个点 → 多个几何候选解
-
         var perPointCandidates =
             new List<List<PointD>>();
 

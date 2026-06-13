@@ -245,14 +245,6 @@ internal static class ProjectDiagnostics
                     "测角网暂时要求至少两个已知平面坐标点作为基准。"));
         }
 
-        foreach (var point in unknownPoints.Where(point => !point.X.HasValue || !point.Y.HasValue))
-        {
-            result.Diagnostics.Add(
-                new ProjectDiagnostic(
-                    DiagnosticSeverity.Error,
-                    $"点 {point.Name} 缺少 X/Y 近似坐标。测角网不会使用画板坐标，请在属性面板中输入近似坐标。"));
-        }
-
         CheckDuplicateNames(project, result, false);
 
         // ----------------------------
@@ -425,7 +417,6 @@ internal static class ProjectDiagnostics
                  p.Y.HasValue,
             p => !p.IsCoordinateFixed,
             "边角");
-        CheckApproximateCoordinateAvailability(project, result, unknownPoints, "边角网");
 
         int redundancy = n - t;
 
@@ -467,7 +458,7 @@ internal static class ProjectDiagnostics
 
         try
         {
-            var candidates = ApproximateCoordinateBuilder.Build(project);
+            var candidates = ApprPointBuilder4D.Build(project);
 
             foreach (var point in unknownPoints)
             {
