@@ -9,14 +9,12 @@ internal static class ApproximateCoordinateBuilder
             new Dictionary<SurveyPoint, List<PointD>>();
 
         //--------------------------------------
-        // 已知点（单解）
+        // 已输入坐标的点（单解）
+        // IsCoordinateFixed=true 表示控制点；IsCoordinateFixed=false 表示未知点初值。
         //--------------------------------------
 
         foreach (var point in project.Points)
         {
-            if (!point.IsCoordinateFixed)
-                continue;
-
             if (!point.X.HasValue || !point.Y.HasValue)
                 continue;
 

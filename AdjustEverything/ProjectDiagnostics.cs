@@ -168,6 +168,7 @@ internal static class ProjectDiagnostics
 
         CheckDuplicateNames(project, result, includeDistanceObservations: true);
         CheckDistanceConnectivity(project, result);
+        CheckApproximateCoordinateAvailability(project, result, unknownPoints, "测边网");
 
         var redundancy = observations.Count - parameterCount;
         if (redundancy == 0 && !result.HasErrors)
@@ -189,6 +190,12 @@ internal static class ProjectDiagnostics
 
         var points = project.Points;
         var observations = project.AngleObservations;
+        var fixedPoints = points
+            .Where(point => point.IsCoordinateFixed && point.X.HasValue && point.Y.HasValue)
+            .ToList();
+        var unknownPoints = points
+            .Where(point => !point.IsCoordinateFixed)
+            .ToList();
 
         if (points.Count == 0)
         {
@@ -222,12 +229,36 @@ internal static class ProjectDiagnostics
 
 
         // 检查重名
+        foreach (var point in points.Where(point => point.IsCoordinateFixed && (!point.X.HasValue || !point.Y.HasValue)))
+        {
+            result.Diagnostics.Add(
+                new ProjectDiagnostic(
+                    DiagnosticSeverity.Error,
+                    $"点 {point.Name} 被设为已知平面点，但没有完整填写 X/Y。"));
+        }
+
+        if (fixedPoints.Count < 2)
+        {
+            result.Diagnostics.Add(
+                new ProjectDiagnostic(
+                    DiagnosticSeverity.Error,
+                    "测角网暂时要求至少两个已知平面坐标点作为基准。"));
+        }
+
+        foreach (var point in unknownPoints.Where(point => !point.X.HasValue || !point.Y.HasValue))
+        {
+            result.Diagnostics.Add(
+                new ProjectDiagnostic(
+                    DiagnosticSeverity.Error,
+                    $"点 {point.Name} 缺少 X/Y 近似坐标。测角网不会使用画板坐标，请在属性面板中输入近似坐标。"));
+        }
+
         CheckDuplicateNames(project, result, false);
 
         // ----------------------------
         // 自由度计算（保守估计）
         // ----------------------------
-        int unknownPointsCount = points.Count(p => !p.IsCoordinateFixed);
+        int unknownPointsCount = unknownPoints.Count;
         int t = unknownPointsCount * 2;  // X,Y
         int n = observations.Count;
 
@@ -394,6 +425,7 @@ internal static class ProjectDiagnostics
                  p.Y.HasValue,
             p => !p.IsCoordinateFixed,
             "边角");
+        CheckApproximateCoordinateAvailability(project, result, unknownPoints, "边角网");
 
         int redundancy = n - t;
 
@@ -420,6 +452,41 @@ internal static class ProjectDiagnostics
         }
 
         return result;
+    }
+
+    private static void CheckApproximateCoordinateAvailability(
+        AdjustmentProject project,
+        ProjectValidationResult result,
+        List<SurveyPoint> unknownPoints,
+        string networkName)
+    {
+        if (unknownPoints.Count == 0 || result.HasErrors)
+        {
+            return;
+        }
+
+        try
+        {
+            var candidates = ApproximateCoordinateBuilder.Build(project);
+
+            foreach (var point in unknownPoints)
+            {
+                if (!candidates.TryGetValue(point, out var list) || list.Count == 0)
+                {
+                    result.Diagnostics.Add(
+                        new ProjectDiagnostic(
+                            DiagnosticSeverity.Error,
+                            $"{networkName}无法为点 {point.Name} 生成初始坐标。请输入该点 X/Y 近似值，或补充与已知坐标点相关的距离观测。"));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            result.Diagnostics.Add(
+                new ProjectDiagnostic(
+                    DiagnosticSeverity.Error,
+                    $"{networkName}初始坐标检查失败：{ex.Message}"));
+        }
     }
     private static void CheckDuplicateNames(AdjustmentProject project, ProjectValidationResult result, bool includeDistanceObservations)
     {

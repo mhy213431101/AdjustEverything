@@ -1037,6 +1037,27 @@ public partial class FormDrawingBoard : Form
         return false;
     }
 
+    private static double[] BuildCoordinateX0(List<SurveyPoint> unknownPoints)
+    {
+        var x0 = new double[unknownPoints.Count * 2];
+
+        for (int i = 0; i < unknownPoints.Count; i++)
+        {
+            var point = unknownPoints[i];
+
+            if (!point.X.HasValue || !point.Y.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"点 {point.Name} 缺少 X/Y 近似坐标。请在属性面板中输入坐标，画板位置不会参与平差计算。");
+            }
+
+            x0[2 * i] = point.X.Value;
+            x0[2 * i + 1] = point.Y.Value;
+        }
+
+        return x0;
+    }
+
     private void RunHeightAdjustment()
     {
         try
@@ -1237,6 +1258,11 @@ public partial class FormDrawingBoard : Form
                 }
             }
 
+            if (result is null)
+            {
+                throw new InvalidOperationException("无法生成测边网初始坐标，请输入未知点 X/Y 近似值或补充足够的距离观测。");
+            }
+
             var precision = PrecisionEstimator.Estimate(result, PrecisionEstimator.NetType.Distance);
 
             var sb = new StringBuilder();
@@ -1356,7 +1382,8 @@ public partial class FormDrawingBoard : Form
                 paramIndex[unknownPoints[i]] = 2 * i;
 
             // 构造模型
-            var model = new AngleModel(unknownPoints, observations, paramIndex);
+            var x0 = BuildCoordinateX0(unknownPoints);
+            var model = new AngleModel(unknownPoints, observations, paramIndex, x0);
 
             // 非线性最小二乘求解
             var result = NonlinearLeastSquaresSolver.Solve(model, model);
@@ -1474,32 +1501,45 @@ public partial class FormDrawingBoard : Form
                     = 2 * i;
             }
 
-            var x0 =
-                new double[
-                    unknownPoints.Count * 2];
+            var approximateCoordinates = ApproximateCoordinateBuilder.Build(_project);
+            var initialSolutions =
+                ApproximateCoordinateBuilder.BuildInitialSolutions(
+                    _project,
+                    unknownPoints,
+                    approximateCoordinates);
 
-            for (int i = 0; i < unknownPoints.Count; i++)
+            double bestVPV = double.MaxValue;
+            var result = default(NonlinearResult);
+
+            foreach (var x0 in initialSolutions)
             {
-                var p = unknownPoints[i];
+                var model =
+                    new AngleDistanceModel(
+                        unknownPoints,
+                        distanceObs,
+                        angleObs,
+                        parameterIndex,
+                        x0);
 
-                x0[2 * i]
-                    = p.X
-                      ?? SurveyCoordinateMapper.XFromCanvas(p.CanvasLocation);
+                var candidate =
+                    NonlinearLeastSquaresSolver.Solve(model, model);
 
-                x0[2 * i + 1]
-                    = p.Y
-                      ?? SurveyCoordinateMapper.YFromCanvas(p.CanvasLocation);
+                double vpv =
+                    MatrixUtility.ComputeVPV(
+                        candidate.LS.V,
+                        candidate.LS.P);
+
+                if (vpv < bestVPV)
+                {
+                    bestVPV = vpv;
+                    result = candidate;
+                }
             }
 
-            var model =
-                new AngleDistanceModel(
-                    unknownPoints,
-                    distanceObs,
-                    angleObs,
-                    parameterIndex,
-                    x0);
-
-            var result = NonlinearLeastSquaresSolver.Solve(model, model);
+            if (result is null)
+            {
+                throw new InvalidOperationException("无法生成边角网初始坐标，请输入未知点 X/Y 近似值或补充足够的距离观测。");
+            }
 
             var precision = PrecisionEstimator.Estimate(result, PrecisionEstimator.NetType.AngleDistance);
 

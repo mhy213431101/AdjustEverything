@@ -16,12 +16,13 @@ namespace AdjustEverything
         public AngleModel(
             List<SurveyPoint> unknownPoints,
             List<AngleObservation> observations,
-            Dictionary<SurveyPoint, int> paramIndex)
+            Dictionary<SurveyPoint, int> paramIndex,
+            double[] x0)
         {
             _unknownPoints = unknownPoints;
             _observations = observations;
             _paramIndex = paramIndex;
-            X0 = _unknownPoints.SelectMany(p => new[] { p.X ?? 0.0, p.Y ?? 0.0 }).ToArray();
+            X0 = x0;
         }
 
         public int n => _observations.Count;
@@ -72,7 +73,13 @@ namespace AdjustEverything
         {
             if (_paramIndex.TryGetValue(p, out int idx))
                 return (X[idx], X[idx + 1]);
-            return (p.X ?? 0.0, p.Y ?? 0.0);
+
+            if (!p.X.HasValue || !p.Y.HasValue)
+            {
+                throw new InvalidOperationException($"点 {p.Name} 缺少 X/Y 坐标。");
+            }
+
+            return (p.X.Value, p.Y.Value);
         }
 
         private double ComputeAngle((double X, double Y) a,
