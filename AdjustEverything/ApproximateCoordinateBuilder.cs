@@ -91,7 +91,7 @@ internal static class ApproximateCoordinateBuilder
             if (!coordinates.TryGetValue(other, out var list))
                 continue;
 
-            // ✔ 关键：传播所有候选中心
+            // 传播所有候选中心
             foreach (var c in list)
             {
                 circles.Add((c, obs.Value));
@@ -132,7 +132,7 @@ internal static class ApproximateCoordinateBuilder
             return false;
 
         //--------------------------------------
-        // 去重（避免传播爆炸）
+        // 去重
         //--------------------------------------
 
         results =
@@ -144,7 +144,7 @@ internal static class ApproximateCoordinateBuilder
     }
 
     /// <summary>
-    /// 两圆交会
+    /// 两圆相交
     /// </summary>
     private static bool CircleIntersection(
         PointD center1,
